@@ -12,6 +12,13 @@
 	},
 	"compatibility_flags": [
 		"nodejs_compat"
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "aoeliga_db",
+			"database_id": "12292d26-ea9c-4eff-b603-aab08f6e30ed"
+		}
 	]
 	/**
 	 * Smart Placement
