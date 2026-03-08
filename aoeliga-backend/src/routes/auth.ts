@@ -94,16 +94,16 @@ auth.get("/discord/callback", async (c) => {
   }
 
   const me: any = await meRes.json();
-  // me.id, me.username, me.global_name, me.avatar
+  // me.id, me.discord_name, me.display_name, me.avatar
   // /users/@me is the standard identity endpoint. :contentReference[oaicite:5]{index=5}
 
   // upsert user
   await c.env.DB.prepare(
-    `INSERT INTO users (discord_id, username, global_name, avatar, last_login_at)
+    `INSERT INTO users (discord_id, discord_name, display_name, avatar, last_login_at)
      VALUES (?, ?, ?, ?, datetime('now'))
      ON CONFLICT(discord_id) DO UPDATE SET
-       username = excluded.username,
-       global_name = excluded.global_name,
+       discord_name = excluded.discord_name,
+       display_name = excluded.display_name,
        avatar = excluded.avatar,
        last_login_at = datetime('now')`
   ).bind(me.id, me.username ?? null, me.global_name ?? null, me.avatar ?? null).run();

@@ -14,8 +14,8 @@ export type Env = {
 export type UserRow = {
   id: number;
   discord_id: string;
-  username: string | null;
-  global_name: string | null;
+  discord_name: string | null;
+  display_name: string | null;
   avatar: string | null;
   is_admin: number; // 0/1
 };
@@ -24,7 +24,7 @@ export const SESSION_COOKIE = "aoeliga_session";
 
 async function loadUserFromSession(c: Context<any>, sessionId: string): Promise<UserRow | null> {
   const row = await c.env.DB.prepare(
-    `SELECT u.id, u.discord_id, u.username, u.global_name, u.avatar, u.is_admin
+    `SELECT u.id, u.discord_id, u.discord_name, u.display_name, u.avatar, u.is_admin
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.id = ?

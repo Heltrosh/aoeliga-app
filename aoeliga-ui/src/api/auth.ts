@@ -2,8 +2,8 @@ export type MeResponse = {
   user: null | {
     id: number;
     discord_id: string;
-    username: string | null;
-    global_name: string | null;
+    discord_name: string | null;
+    display_name: string | null;
     avatar: string | null;
     is_admin: number;
   };

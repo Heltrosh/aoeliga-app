@@ -39,13 +39,6 @@ app.use(
   })
 );
 
-// Health endpoints (no CORS needed unless you want it)
-app.get("/health", (c) => c.text("ok"));
-app.get("/db", async (c) => {
-  const row = await c.env.DB.prepare("SELECT 1 AS test").first();
-  return c.json(row);
-});
-
 // Mount routes
 app.route("/api", publicRoutes);
 app.route("/api/admin", adminRoutes);

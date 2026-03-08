@@ -62,7 +62,7 @@ export default function AppLayout({ user, authLoading, refreshMe }: Props) {
     ];
   }, [slug, base]);
 
-  const displayName = user?.global_name || user?.username || null;
+  const displayName = user?.display_name || user?.discord_name || null;
 
   async function logout() {
     await fetch("/auth/logout", { method: "POST", credentials: "include" }).catch(() => null);
