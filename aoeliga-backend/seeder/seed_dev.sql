@@ -7,16 +7,6 @@ PRAGMA foreign_keys = ON;
 BEGIN TRANSACTION;
 
 -- ----------------------------
--- Ruleset
--- ----------------------------
-INSERT OR IGNORE INTO rulesets (id, name, config_json)
-VALUES (
-  1,
-  'Default League Rules',
-  '{"stages":"group,playoffs", "group":"pa3,roundrobin", "playoffs":"bo5,gauntlet", "special":"bo7,final"}'
-);
-
--- ----------------------------
 -- Tournament
 -- ----------------------------
 INSERT OR IGNORE INTO tournaments (id, slug, name, description, status, starts_at, ends_at)
@@ -31,6 +21,32 @@ VALUES (
 );
 
 -- ----------------------------
+-- Users (fake Discord IDs)
+-- discord_id must be unique and "looks like" Discord snowflake (as text)
+-- ----------------------------
+INSERT OR IGNORE INTO users (id, discord_id, discord_name, display_name, avatar, is_admin, is_banned)
+VALUES
+  (1, '164698420777320448', 'heltrosh', 'Heltrosh', 'b5bb8a4921fee3dff2bdbdfd08f4e7a3', 1, 0),
+  (2, '100000000000000002', 'player2', 'Player Two', NULL, 0, 0),
+  (3, '100000000000000003', 'player3', 'Player Three', NULL, 0, 0),
+  (4, '100000000000000004', 'player4', 'Player Four', NULL, 0, 0),
+  (5, '100000000000000005', 'player5', 'Player Five', NULL, 0, 0),
+  (6, '100000000000000006', 'player6', 'Player Six', NULL, 0, 0),
+  (7, '100000000000000007', 'player7', 'Player Seven', NULL, 0, 0),
+  (8, '100000000000000008', 'player8', 'Player Eight', NULL, 0, 0);
+
+-- ----------------------------
+-- Ruleset
+-- ----------------------------
+INSERT OR IGNORE INTO rulesets (id, name, config_json, created_by_user_id)
+VALUES (
+  1,
+  'Default League Rules',
+  '{"stages":"group,playoffs", "group":"pa3,roundrobin", "playoffs":"bo5,gauntlet", "special":"bo7,final"}',
+  1
+);
+
+-- ----------------------------
 -- Divisions
 -- ----------------------------
 INSERT OR IGNORE INTO divisions (id, tournament_id, name, ruleset_id)
@@ -38,20 +54,6 @@ VALUES
   (1, 1, 'Division 1', 1),
   (2, 1, 'Division 2', 1);
 
--- ----------------------------
--- Users (fake Discord IDs)
--- discord_id must be unique and "looks like" Discord snowflake (as text)
--- ----------------------------
-INSERT OR IGNORE INTO users (id, discord_id, discord_name, display_name, avatar, is_admin)
-VALUES
-  (1, '164698420777320448', 'heltrosh', 'Heltrosh', 'b5bb8a4921fee3dff2bdbdfd08f4e7a3', 1),
-  (2, '100000000000000002', 'player2', 'Player Two', NULL, 0),
-  (3, '100000000000000003', 'player3', 'Player Three', NULL, 0),
-  (4, '100000000000000004', 'player4', 'Player Four', NULL, 0),
-  (5, '100000000000000005', 'player5', 'Player Five', NULL, 0),
-  (6, '100000000000000006', 'player6', 'Player Six', NULL, 0),
-  (7, '100000000000000007', 'player7', 'Player Seven', NULL, 0),
-  (8, '100000000000000008', 'player8', 'Player Eight', NULL, 0);
 
 -- ----------------------------
 -- Tournament Admin (scoped)
@@ -65,15 +67,15 @@ VALUES (1, 1, 'admin');
 -- ----------------------------
 INSERT OR IGNORE INTO tournament_players (id, tournament_id, user_id, division_id, seed, status, aoe_id)
 VALUES
-  (1, 1, 1, 1, 1, 'active', 2047125),
-  (2, 1, 2, 1, 2, 'active', 498754),
-  (3, 1, 3, 1, 3, 'active', 123456),
-  (4, 1, 4, 1, 4, 'active', 234567),
+  (1, 1, 1, 1, 1, 'active', '2047125'),
+  (2, 1, 2, 1, 2, 'active', '498754'),
+  (3, 1, 3, 1, 3, 'active', '123456'),
+  (4, 1, 4, 1, 4, 'active', '234567'),
 
-  (5, 1, 5, 2, 1, 'active', 345678),
-  (6, 1, 6, 2, 2, 'active', 456789),
-  (7, 1, 7, 2, 3, 'active', 567891),
-  (8, 1, 8, 2, 4, 'active', 678912);
+  (5, 1, 5, 2, 1, 'active', '345678'),
+  (6, 1, 6, 2, 2, 'active', '456789'),
+  (7, 1, 7, 2, 3, 'active', '567891'),
+  (8, 1, 8, 2, 4, 'active', '678912');
 
 -- ----------------------------
 -- Matches (only if there are none yet for this tournament)

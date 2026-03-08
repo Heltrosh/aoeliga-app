@@ -1,4 +1,4 @@
--- SESSIONS (cookie -> this table)
+
 CREATE TABLE IF NOT EXISTS sessions (
   id           TEXT PRIMARY KEY, -- random token
   user_id      INTEGER NOT NULL,
@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 
--- OAUTH STATE (CSRF protection for OAuth callback)
 CREATE TABLE IF NOT EXISTS oauth_states (
   state       TEXT PRIMARY KEY,
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),

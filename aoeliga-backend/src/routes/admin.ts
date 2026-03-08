@@ -1,35 +1,105 @@
-import { Hono } from "hono";
-import type { Env } from "../app";
-import { requireGlobalAdmin } from "../lib/perm_mw";
-import { requireUser } from "../lib/auth_session";
-import { badRequest, ok } from "../lib/http";
+import { Hono } from 'hono';
+import type { AppBindings } from '../types';
+import { requireUser } from '../lib/auth_session';
+import { requirePermission } from '../lib/permissions';
+import { httpError } from '../lib/http';
 
-const admin = new Hono<{ Bindings: Env }>();
+const admin = new Hono<AppBindings>();
+admin.use('*', requireUser);
+admin.use('*', requirePermission('platform.admin'));
 
-admin.use("*", requireUser);
-admin.use("*", requireGlobalAdmin);
+admin.get('/users', async (c) => {
+  const q = (c.req.query('q') ?? '').trim();
+  const sql = q
+    ? `SELECT id, discord_id, discord_name, display_name, avatar, is_admin, is_banned, created_at, last_login_at
+       FROM users
+       WHERE lower(coalesce(discord_name,'')) LIKE lower(?) OR lower(coalesce(display_name,'')) LIKE lower(?)
+       ORDER BY id DESC LIMIT 100`
+    : `SELECT id, discord_id, discord_name, display_name, avatar, is_admin, is_banned, created_at, last_login_at
+       FROM users ORDER BY id DESC LIMIT 100`;
+  const stmt = c.env.DB.prepare(sql);
+  const rows = q ? await stmt.bind(`%${q}%`, `%${q}%`).all() : await stmt.all();
+  return c.json({ users: rows.results ?? [] });
+});
 
+admin.get('/users/:id', async (c) => {
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id <= 0)
+    httpError(400, "Invalid user id");
 
-// POST /api/admin/tournaments  { slug, name, description?, starts_at?, ends_at? }
-admin.post("/tournaments", async (c) => {
-  const body = await c.req.json().catch(() => null);
-  if (!body) return badRequest(c, "Invalid JSON");
-  if (!body.slug || !body.name) return badRequest(c, "slug and name required");
+  const row = await c.env.DB.prepare(`SELECT * FROM users WHERE id = ? LIMIT 1`).bind(id).first();
+  if (!row) 
+    httpError(404, 'User not found');
+  
+  return c.json({ user: row });
+});
 
-  const slug = String(body.slug).trim();
-  const name = String(body.name).trim();
-  const description = body.description != null ? String(body.description) : null;
-  const startsAt = body.starts_at != null ? String(body.starts_at) : null;
-  const endsAt = body.ends_at != null ? String(body.ends_at) : null;
+admin.patch('/users/:id/admin', async (c) => {
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id <= 0)
+    httpError(400, "Invalid user id");
+  
+  const body = await c.req.json<{ is_admin?: boolean }>();
+  if (typeof body.is_admin !== 'boolean') 
+    httpError(400, 'is_admin boolean is required');
+  
+  const existing = await c.env.DB.prepare(`SELECT id FROM users WHERE id = ? LIMIT 1`).bind(id).first<{ id: number }>();
+  if (!existing)
+    httpError(404, "User not found");
 
-  const res = await c.env.DB.prepare(
+  await c.env.DB.prepare(`UPDATE users SET is_admin = ? WHERE id = ?`).bind(body.is_admin ? 1 : 0, id).run();
+  
+  return c.json({ ok: true });
+});
+
+admin.patch('/users/:id/ban', async (c) => {
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id <= 0)
+    httpError(400, "Invalid user id");
+
+  const body = await c.req.json<{ is_banned?: boolean }>();
+  if (typeof body.is_banned !== 'boolean')
+     httpError(400, 'is_banned boolean is required');
+    
+  const existing = await c.env.DB.prepare(`SELECT id FROM users WHERE id = ? LIMIT 1`).bind(id).first<{ id: number }>();
+  if (!existing)
+    httpError(404, "User not found");
+  
+  await c.env.DB.prepare(`UPDATE users SET is_banned = ? WHERE id = ?`).bind(body.is_banned ? 1 : 0, id).run();
+  
+  return c.json({ ok: true });
+});
+
+admin.post('/tournaments', async (c) => {
+  const body = await c.req.json<{ slug?: string; name?: string; description?: string | null; starts_at?: string | null; ends_at?: string | null }>();
+
+  const slug = body.slug?.trim();
+  const name = body.name?.trim();
+  if (!slug || !name) 
+    httpError(400, 'slug and name are required');
+
+  const existing = await c.env.DB.prepare(`SELECT id FROM tournaments WHERE slug = ? LIMIT 1`).bind(slug).first<{ id: number }>();
+  if (existing)
+    httpError(404, "Tournament slug already exists");
+  
+  const result = await c.env.DB.prepare(
     `INSERT INTO tournaments (slug, name, description, status, starts_at, ends_at)
      VALUES (?, ?, ?, 'draft', ?, ?)`
-  )
-    .bind(slug, name, description, startsAt, endsAt)
-    .run();
+  ).bind(slug, name, body.description ?? null, body.starts_at ?? null, body.ends_at ?? null).run();
+  
+  return c.json({ ok: true, id: result.meta.last_row_id }, 201);
+});
 
-  return ok(c, { ok: true, id: res.meta.last_row_id });
+admin.delete('/tournaments/:slug', async (c) => {
+  const slug = c.req.param('slug');
+
+  const existing = await c.env.DB.prepare(`SELECT id FROM tournaments WHERE slug = ? LIMIT 1`).bind(slug).first<{ id: number }>();
+  if (!existing)
+    httpError(404, "Tournament not found");
+  
+  await c.env.DB.prepare(`DELETE FROM tournaments WHERE slug = ?`).bind(slug).run();
+  
+  return c.json({ ok: true });
 });
 
 export default admin;

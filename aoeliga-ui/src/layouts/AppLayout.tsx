@@ -65,13 +65,13 @@ export default function AppLayout({ user, authLoading, refreshMe }: Props) {
   const displayName = user?.display_name || user?.discord_name || null;
 
   async function logout() {
-    await fetch("/auth/logout", { method: "POST", credentials: "include" }).catch(() => null);
+    await fetch("/app/auth/logout", { method: "POST", credentials: "include" }).catch(() => null);
     await refreshMe();
   }
 
   function login() {
     const redirect = loc.pathname + loc.search;
-    window.location.assign(`/auth/discord?redirect=${encodeURIComponent(redirect)}`);
+    window.location.assign(`/app/auth/discord?redirect=${encodeURIComponent(redirect)}`);
   }
 
   return (

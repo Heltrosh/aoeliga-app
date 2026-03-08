@@ -1,12 +1,13 @@
-import { Hono } from "hono";
-import type { Env } from "../app";
-import { ok, badRequest } from "../lib/http";
-import { setSessionCookie, clearSessionCookie, getSessionId } from "../lib/session";
+//TODO styling
 
-const auth = new Hono<{ Bindings: Env; Variables: { user?: any } }>();
+import { Hono } from "hono";
+import type { AppBindings } from "../types";
+import { ok, httpError } from "../lib/http";
+import { setSessionCookie, clearSessionCookie, getSessionId } from "../lib/auth_session";
+
+const auth = new Hono<AppBindings>();
 
 function randomState(): string {
-  // Works in Workers
   return crypto.randomUUID().replace(/-/g, "");
 }
 
@@ -48,7 +49,7 @@ auth.get("/discord", async (c) => {
 auth.get("/discord/callback", async (c) => {
   const code = c.req.query("code");
   const state = c.req.query("state");
-  if (!code || !state) return badRequest(c, "Missing code/state");
+  if (!code || !state) return httpError(400, "Missing code/state");
 
   // verify state (and delete it)
   const stateRow = await c.env.DB.prepare(
@@ -58,7 +59,7 @@ auth.get("/discord/callback", async (c) => {
        AND expires_at > datetime('now')`
   ).bind(state).first();
 
-  if (!stateRow) return badRequest(c, "Invalid or expired state");
+  if (!stateRow) return httpError(400, "Invalid or expired state");
 
   await c.env.DB.prepare(`DELETE FROM oauth_states WHERE state = ?`).bind(state).run();
 

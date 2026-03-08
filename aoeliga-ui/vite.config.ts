@@ -9,7 +9,7 @@ export default defineConfig({
         target: "http://localhost:8787",
         changeOrigin: true,
       },
-      "/auth": {
+      "/app/auth": {
         target: "http://localhost:8787",
         changeOrigin: true,
       },

@@ -16,14 +16,14 @@ export async function apiGetMe(): Promise<MeResponse> {
 }
 
 export async function apiLogout(): Promise<void> {
-  const res = await fetch("/auth/logout", {
+  const res = await fetch("/app/auth/logout", {
     method: "POST",
     credentials: "include",
   });
-  if (!res.ok) throw new Error(`POST /auth/logout failed (${res.status})`);
+  if (!res.ok) throw new Error(`POST /app/auth/logout failed (${res.status})`);
 }
 
 export function startDiscordLogin(redirectTo: string) {
-  const url = `/auth/discord?redirect=${encodeURIComponent(redirectTo)}`;
+  const url = `/app/auth/discord?redirect=${encodeURIComponent(redirectTo)}`;
   window.location.assign(url);
 }

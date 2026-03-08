@@ -1,75 +1,67 @@
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
-
-export type Env = {
-  DB: D1Database;
-  APP_ORIGIN: string;
-
-  // oauth bits (you already have these)
-  DISCORD_CLIENT_ID: string;
-  DISCORD_CLIENT_SECRET: string;
-  DISCORD_REDIRECT_URI: string;
-};
-
-export type UserRow = {
-  id: number;
-  discord_id: string;
-  discord_name: string | null;
-  display_name: string | null;
-  avatar: string | null;
-  is_admin: number; // 0/1
-};
+import { AuthUser, AppBindings } from "../types";
+import { httpError } from "./http";
 
 export const SESSION_COOKIE = "aoeliga_session";
 
-async function loadUserFromSession(c: Context<any>, sessionId: string): Promise<UserRow | null> {
+export function getSessionId(c: Context<AppBindings>): string | null {
+  return getCookie(c, SESSION_COOKIE) ?? null;
+}
+
+async function loadUserFromSession(c: Context<AppBindings>): Promise<AuthUser | null> {
+  const sessionId = getCookie(c, SESSION_COOKIE);
+  if (!sessionId) return null;
+
   const row = await c.env.DB.prepare(
-    `SELECT u.id, u.discord_id, u.discord_name, u.display_name, u.avatar, u.is_admin
+    `SELECT u.*
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.id = ?
        AND s.revoked_at IS NULL
-       AND s.expires_at > datetime('now')`
-  ).bind(sessionId).first();
+       AND s.expires_at > datetime('now')
+    LIMIT 1`
+  ).bind(sessionId).first<AuthUser>();
 
   return row ?? null;
 }
 
-// Sets c.set("user", user) if logged in; otherwise leaves it undefined
-export const optionalUser: MiddlewareHandler<{ Bindings: Env; Variables: { user?: UserRow } }> =
+export const optionalUser: MiddlewareHandler<AppBindings> =
   async (c, next) => {
-    const sid = getCookie(c, SESSION_COOKIE);
-    if (sid) {
-      const user = await loadUserFromSession(c, sid);
-      if (user) c.set("user", user);
-    }
+    const user = await loadUserFromSession(c);
+    c.set("user", user);
     await next();
   };
 
-export const requireUser: MiddlewareHandler<{ Bindings: Env; Variables: { user: UserRow } }> =
+export const requireUser: MiddlewareHandler<AppBindings> =
   async (c, next) => {
-    const sid = getCookie(c, SESSION_COOKIE);
-    if (!sid) return c.json({ error: "Unauthorized" }, 401);
+    const existingUser = c.get("user");
+    const user = existingUser ?? (await loadUserFromSession(c));
 
-    const user = await loadUserFromSession(c, sid);
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
+    if (!user) {
+      httpError(401, "Unauthorized");
+    }
 
     c.set("user", user);
     await next();
   };
 
-// Keep your existing cookie helper if you already have one.
-// This version is safe for localhost dev.
-export function setSessionCookie(c: Context, sessionId: string, maxAgeSeconds: number) {
+export function getUser(c: Context<AppBindings>): AuthUser | null {
+  return c.get("user") ?? null;
+}
+
+export function setSessionCookie(c: Context<AppBindings>, sessionId: string, maxAgeSeconds: number) {
+  const isHttps = new URL(c.req.url).protocol === "https:";
+
   setCookie(c, SESSION_COOKIE, sessionId, {
     httpOnly: true,
-    secure: false,        // set true in production (https)
+    secure: isHttps, 
     sameSite: "Lax",
     path: "/",
     maxAge: maxAgeSeconds,
   });
 }
 
-export function clearSessionCookie(c: Context) {
+export function clearSessionCookie(c: Context<AppBindings>) {
   deleteCookie(c, SESSION_COOKIE, { path: "/" });
 }
