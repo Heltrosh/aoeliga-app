@@ -1,17 +1,16 @@
-
-//TODO let AI check + styling and all
-
 import { Hono } from 'hono';
 import type { AppBindings } from '../types';
 import { requireUser } from '../lib/auth_session';
 import { requirePermission } from '../lib/permissions';
 
 const users = new Hono<AppBindings>();
+
 users.use('*', requireUser);
 
 users.get('/search', requirePermission('user.search'), async (c) => {
   const q = (c.req.query('q') ?? '').trim();
-  if (!q) return c.json({ users: [] });
+  if (!q) 
+    return c.json({ users: [] });
 
   const rows = await c.env.DB.prepare(
     `SELECT id, discord_id, discord_name, display_name, avatar

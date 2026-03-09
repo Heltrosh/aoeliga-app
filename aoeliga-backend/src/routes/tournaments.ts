@@ -1,20 +1,20 @@
 //TODO everything
 
 import { Hono } from 'hono';
-import type { Env } from '../types';
-import { requireUser, withOptionalUser } from '../lib/auth_session';
-import { badRequest, notFound } from '../lib/http';
+import type { AppBindings } from '../types';
+import { requireUser, optionalUser } from '../lib/auth_session';
+import { httpError } from '../lib/http';
 import { requirePermission } from '../lib/permissions';
 import { withTournamentBySlug } from '../lib/tournament';
 
-const tournaments = new Hono<Env>();
+const tournaments = new Hono<AppBindings>();
 
 tournaments.get('/', async (c) => {
   const rows = await c.env.DB.prepare(`SELECT * FROM tournaments ORDER BY created_at DESC`).all();
   return c.json({ tournaments: rows.results ?? [] });
 });
 
-tournaments.get('/:slug', withOptionalUser, withTournamentBySlug, async (c) => {
+tournaments.get('/:slug', optionalUser, withTournamentBySlug, async (c) => {
   return c.json({ tournament: c.get('tournament') });
 });
 
@@ -35,24 +35,24 @@ tournaments.put('/:slug', requireUser, withTournamentBySlug, requirePermission('
 
 // divisions
 
-tournaments.get('/:slug/divisions', withOptionalUser, withTournamentBySlug, async (c) => {
+tournaments.get('/:slug/divisions', optionalUser, withTournamentBySlug, async (c) => {
   const t = c.get('tournament')!;
   const rows = await c.env.DB.prepare(`SELECT * FROM divisions WHERE tournament_id = ? ORDER BY id ASC`).bind(t.id).all();
   return c.json({ divisions: rows.results ?? [] });
 });
 
-tournaments.get('/:slug/divisions/:divisionId', withOptionalUser, withTournamentBySlug, async (c) => {
+tournaments.get('/:slug/divisions/:divisionId', optionalUser, withTournamentBySlug, async (c) => {
   const t = c.get('tournament')!;
   const divisionId = Number(c.req.param('divisionId'));
   const row = await c.env.DB.prepare(`SELECT * FROM divisions WHERE id = ? AND tournament_id = ? LIMIT 1`).bind(divisionId, t.id).first();
-  if (!row) notFound('Division not found');
+  if (!row) httpError(404, 'Division not found');
   return c.json({ division: row });
 });
 
 tournaments.post('/:slug/divisions', requireUser, withTournamentBySlug, requirePermission('division.manage'), async (c) => {
   const t = c.get('tournament')!;
   const body = await c.req.json<{ name?: string; ruleset_id?: number | null }>();
-  if (!body.name) badRequest('name is required');
+  if (!body.name) httpError(400, 'name is required');
   await c.env.DB.prepare(`INSERT INTO divisions (tournament_id, name, ruleset_id) VALUES (?, ?, ?)`)
     .bind(t.id, body.name, body.ruleset_id ?? null).run();
   return c.json({ ok: true }, 201);
@@ -76,7 +76,7 @@ tournaments.delete('/:slug/divisions/:divisionId', requireUser, withTournamentBy
 
 // admins
 
-tournaments.get('/:slug/admins', withOptionalUser, withTournamentBySlug, async (c) => {
+tournaments.get('/:slug/admins', optionalUser, withTournamentBySlug, async (c) => {
   const t = c.get('tournament')!;
   const rows = await c.env.DB.prepare(
     `SELECT ta.user_id, ta.role, ta.created_at, u.discord_name, u.display_name, u.avatar
@@ -91,7 +91,7 @@ tournaments.get('/:slug/admins', withOptionalUser, withTournamentBySlug, async (
 tournaments.post('/:slug/admins', requireUser, withTournamentBySlug, requirePermission('admin.assign'), async (c) => {
   const t = c.get('tournament')!;
   const body = await c.req.json<{ user_id?: number; role?: 'admin' | 'moderator' }>();
-  if (!body.user_id || !body.role) badRequest('user_id and role are required');
+  if (!body.user_id || !body.role) httpError(400, 'user_id and role are required');
   await c.env.DB.prepare(
     `INSERT INTO tournament_admins (tournament_id, user_id, role) VALUES (?, ?, ?)
      ON CONFLICT(tournament_id, user_id) DO UPDATE SET role = excluded.role`
@@ -103,7 +103,7 @@ tournaments.put('/:slug/admins/:userId', requireUser, withTournamentBySlug, requ
   const t = c.get('tournament')!;
   const userId = Number(c.req.param('userId'));
   const body = await c.req.json<{ role?: 'admin' | 'moderator' }>();
-  if (!body.role) badRequest('role is required');
+  if (!body.role) httpError(400, 'role is required');
   await c.env.DB.prepare(`UPDATE tournament_admins SET role = ? WHERE tournament_id = ? AND user_id = ?`).bind(body.role, t.id, userId).run();
   return c.json({ ok: true });
 });
@@ -117,7 +117,7 @@ tournaments.delete('/:slug/admins/:userId', requireUser, withTournamentBySlug, r
 
 // streamers
 
-tournaments.get('/:slug/streamers', withOptionalUser, withTournamentBySlug, async (c) => {
+tournaments.get('/:slug/streamers', optionalUser, withTournamentBySlug, async (c) => {
   const t = c.get('tournament')!;
   const rows = await c.env.DB.prepare(
     `SELECT ts.user_id, ts.display_name, ts.stream_url, ts.language, ts.created_at,
@@ -133,7 +133,7 @@ tournaments.get('/:slug/streamers', withOptionalUser, withTournamentBySlug, asyn
 tournaments.post('/:slug/streamers', requireUser, withTournamentBySlug, requirePermission('streamer.assign'), async (c) => {
   const t = c.get('tournament')!;
   const body = await c.req.json<{ user_id?: number; display_name?: string | null; stream_url?: string | null; language?: string | null }>();
-  if (!body.user_id) badRequest('user_id is required');
+  if (!body.user_id) httpError(400, 'user_id is required');
   await c.env.DB.prepare(
     `INSERT INTO tournament_streamers (tournament_id, user_id, display_name, stream_url, language)
      VALUES (?, ?, ?, ?, ?)
@@ -166,7 +166,7 @@ tournaments.delete('/:slug/streamers/:userId', requireUser, withTournamentBySlug
 
 // players
 
-tournaments.get('/:slug/players', withOptionalUser, withTournamentBySlug, async (c) => {
+tournaments.get('/:slug/players', optionalUser, withTournamentBySlug, async (c) => {
   const t = c.get('tournament')!;
   const rows = await c.env.DB.prepare(
     `SELECT tp.*, u.discord_name, u.display_name, u.avatar, d.name as division_name
@@ -179,7 +179,7 @@ tournaments.get('/:slug/players', withOptionalUser, withTournamentBySlug, async 
   return c.json({ players: rows.results ?? [] });
 });
 
-tournaments.get('/:slug/players/:playerId', withOptionalUser, withTournamentBySlug, async (c) => {
+tournaments.get('/:slug/players/:playerId', optionalUser, withTournamentBySlug, async (c) => {
   const t = c.get('tournament')!;
   const playerId = Number(c.req.param('playerId'));
   const row = await c.env.DB.prepare(
@@ -189,7 +189,7 @@ tournaments.get('/:slug/players/:playerId', withOptionalUser, withTournamentBySl
      LEFT JOIN divisions d ON d.id = tp.division_id
      WHERE tp.id = ? AND tp.tournament_id = ? LIMIT 1`
   ).bind(playerId, t.id).first();
-  if (!row) notFound('Tournament player not found');
+  if (!row) httpError(404, 'Tournament player not found');
   return c.json({ player: row });
 });
 
@@ -197,7 +197,7 @@ tournaments.post('/:slug/players', requireUser, withTournamentBySlug, requirePer
   const t = c.get('tournament')!;
   const user = c.get('user')!;
   const body = await c.req.json<{ user_id?: number; division_id?: number | null; aoe_id?: string; seed?: number | null; status?: string }>();
-  if (!body.aoe_id) badRequest('aoe_id is required');
+  if (!body.aoe_id) httpError(400, 'aoe_id is required');
   const actingAsSelf = !body.user_id || body.user_id === user.id;
   const userId = actingAsSelf ? user.id : body.user_id;
 
@@ -242,7 +242,7 @@ tournaments.delete('/:slug/players/:playerId', requireUser, withTournamentBySlug
 
 // matches
 
-tournaments.get('/:slug/matches', withOptionalUser, withTournamentBySlug, async (c) => {
+tournaments.get('/:slug/matches', optionalUser, withTournamentBySlug, async (c) => {
   const t = c.get('tournament')!;
   const divisionId = c.req.query('divisionId');
   const week = c.req.query('week');
@@ -259,18 +259,18 @@ tournaments.get('/:slug/matches', withOptionalUser, withTournamentBySlug, async 
   return c.json({ matches: rows.results ?? [] });
 });
 
-tournaments.get('/:slug/matches/:matchId', withOptionalUser, withTournamentBySlug, async (c) => {
+tournaments.get('/:slug/matches/:matchId', optionalUser, withTournamentBySlug, async (c) => {
   const t = c.get('tournament')!;
   const matchId = Number(c.req.param('matchId'));
   const row = await c.env.DB.prepare(`SELECT * FROM matches WHERE id = ? AND tournament_id = ? LIMIT 1`).bind(matchId, t.id).first();
-  if (!row) notFound('Match not found');
+  if (!row) httpError(400, 'Match not found');
   return c.json({ match: row });
 });
 
 tournaments.post('/:slug/matches', requireUser, withTournamentBySlug, requirePermission('match.manage'), async (c) => {
   const t = c.get('tournament')!;
   const body = await c.req.json<{ division_id?: number; stage?: string; round_number?: number | null; week_number?: number | null; player1_id?: number; player2_id?: number; scheduled_for?: string | null; state?: string }>();
-  if (!body.division_id || !body.player1_id || !body.player2_id) badRequest('division_id, player1_id and player2_id are required');
+  if (!body.division_id || !body.player1_id || !body.player2_id) httpError(400, 'division_id, player1_id and player2_id are required');
   await c.env.DB.prepare(
     `INSERT INTO matches (tournament_id, division_id, stage, round_number, week_number, player1_id, player2_id, scheduled_for, state)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -312,7 +312,7 @@ tournaments.delete('/:slug/matches/:matchId', requireUser, withTournamentBySlug,
 
 // replays
 
-tournaments.get('/:slug/matches/:matchId/replays', withOptionalUser, withTournamentBySlug, async (c) => {
+tournaments.get('/:slug/matches/:matchId/replays', optionalUser, withTournamentBySlug, async (c) => {
   const t = c.get('tournament')!;
   const matchId = Number(c.req.param('matchId'));
   const rows = await c.env.DB.prepare(`SELECT * FROM replays WHERE tournament_id = ? AND match_id = ? ORDER BY uploaded_at ASC`).bind(t.id, matchId).all();
@@ -324,7 +324,7 @@ tournaments.post('/:slug/matches/:matchId/replays', requireUser, withTournamentB
   const user = c.get('user')!;
   const matchId = Number(c.req.param('matchId'));
   const body = await c.req.json<{ r2_object_key?: string; file_size_bytes?: number | null; content_hash?: string | null; original_filename?: string | null }>();
-  if (!body.r2_object_key) badRequest('r2_object_key is required');
+  if (!body.r2_object_key) httpError(400, 'r2_object_key is required');
   await c.env.DB.prepare(
     `INSERT INTO replays (match_id, tournament_id, uploaded_by, r2_object_key, file_size_bytes, content_hash, original_filename)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -334,17 +334,17 @@ tournaments.post('/:slug/matches/:matchId/replays', requireUser, withTournamentB
 
 // match units
 
-tournaments.get('/:slug/matches/:matchId/units', withOptionalUser, withTournamentBySlug, async (c) => {
+tournaments.get('/:slug/matches/:matchId/units', optionalUser, withTournamentBySlug, async (c) => {
   const matchId = Number(c.req.param('matchId'));
   const rows = await c.env.DB.prepare(`SELECT * FROM match_units WHERE match_id = ? ORDER BY unit_index ASC`).bind(matchId).all();
   return c.json({ units: rows.results ?? [] });
 });
 
-tournaments.get('/:slug/matches/:matchId/units/:unitId', withOptionalUser, withTournamentBySlug, async (c) => {
+tournaments.get('/:slug/matches/:matchId/units/:unitId', optionalUser, withTournamentBySlug, async (c) => {
   const matchId = Number(c.req.param('matchId'));
   const unitId = Number(c.req.param('unitId'));
   const row = await c.env.DB.prepare(`SELECT * FROM match_units WHERE id = ? AND match_id = ? LIMIT 1`).bind(unitId, matchId).first();
-  if (!row) notFound('Match unit not found');
+  if (!row) httpError(400, 'Match unit not found');
   return c.json({ unit: row });
 });
 
