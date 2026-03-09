@@ -5,20 +5,13 @@ import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "@mantine/dates/styles.css";
 
-import { MantineProvider } from "@mantine/core";
-import { Notifications } from "@mantine/notifications";
-import { BrowserRouter } from "react-router-dom";
-
 import App from "./App";
-import { theme } from "./theme";
+import { AppProviders } from "./app/AppProviders";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <MantineProvider theme={theme} defaultColorScheme="dark">
-      <Notifications />
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </MantineProvider>
+    <AppProviders>
+      <App />
+    </AppProviders>
   </React.StrictMode>
 );

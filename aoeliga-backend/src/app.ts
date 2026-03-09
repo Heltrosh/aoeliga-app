@@ -8,8 +8,8 @@ import type { AppBindings } from './types';
 import admin from './routes/admin';
 import me from './routes/me';
 import rulesets from './routes/rulesets';
-//import tournaments from './routes/tournaments';
-//import users from './routes/users';
+import tournaments from './routes/tournaments';
+import users from './routes/users';
 import auth from "./routes/auth";
 
 const app = new Hono<AppBindings>();
@@ -22,10 +22,9 @@ app.use(
   cors({
     origin: (origin, c) => {
       const configured = (c.env.CORS_ORIGIN ?? "").trim();
-      if (!configured) return "*";
-      // If configured, allow only that origin. (Or return null to block.)
-      if (origin === configured) return origin;
-      return configured;
+      const allowed = configured || "http://localhost:5173";
+
+      return origin === allowed ? origin : allowed;
     },
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "X-Admin-Token"],
@@ -35,13 +34,12 @@ app.use(
 );
 
 // Mount routes
-
 app.route('/api/me', me);
-//app.route('/api/users', users);
+app.route('/api/users', users);
 app.route('/api/rulesets', rulesets);
-//app.route('/api/tournaments', tournaments);
+app.route('/api/tournaments', tournaments);
 app.route('/api/admin', admin);
-app.route('/app/auth/', auth);
+app.route('/auth/', auth);
 
 // 404 fallback
 app.notFound((c) => c.json({ error: "Not found", path: c.req.path }, 404));

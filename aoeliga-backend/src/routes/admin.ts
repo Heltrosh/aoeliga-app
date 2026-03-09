@@ -93,11 +93,9 @@ admin.post('/tournaments', async (c) => {
 admin.delete('/tournaments/:slug', async (c) => {
   const slug = c.req.param('slug');
 
-  const existing = await c.env.DB.prepare(`SELECT id FROM tournaments WHERE slug = ? LIMIT 1`).bind(slug).first<{ id: number }>();
-  if (!existing)
+  const result = await c.env.DB.prepare(`DELETE FROM tournaments WHERE slug = ?`).bind(slug).run();
+  if ((result.meta.changes ?? 0) === 0)
     httpError(404, "Tournament not found");
-  
-  await c.env.DB.prepare(`DELETE FROM tournaments WHERE slug = ?`).bind(slug).run();
   
   return c.json({ ok: true });
 });

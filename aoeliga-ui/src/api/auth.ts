@@ -1,29 +1,17 @@
-export type MeResponse = {
-  user: null | {
-    id: number;
-    discord_id: string;
-    discord_name: string | null;
-    display_name: string | null;
-    avatar: string | null;
-    is_admin: number;
-  };
-};
+import { api, API_BASE } from "./client";
+import type { MeResponse } from "../auth/auth-types";
 
-export async function apiGetMe(): Promise<MeResponse> {
-  const res = await fetch("/api/me", { credentials: "include" });
-  if (!res.ok) throw new Error(`GET /api/me failed (${res.status})`);
-  return res.json();
+export function fetchMe(): Promise<MeResponse> {
+  return api.get("/api/me");
 }
 
-export async function apiLogout(): Promise<void> {
-  const res = await fetch("/app/auth/logout", {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error(`POST /app/auth/logout failed (${res.status})`);
+export function login(redirect = "/") {
+  const base = API_BASE || window.location.origin;
+  const url = new URL("/auth/discord", base);
+  url.searchParams.set("redirect", redirect);
+  window.location.assign(url.toString());
 }
 
-export function startDiscordLogin(redirectTo: string) {
-  const url = `/app/auth/discord?redirect=${encodeURIComponent(redirectTo)}`;
-  window.location.assign(url);
+export async function logout() {
+  await api.post("/auth/logout");
 }

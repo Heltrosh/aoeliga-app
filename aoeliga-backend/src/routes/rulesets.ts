@@ -86,16 +86,16 @@ rulesets.delete('/:id', requirePermission('ruleset.update.own', async (c) => {
     if (!Number.isInteger(id) || id <= 0)
       httpError(400, "Invalid ruleset id");
     
-    const existing = await c.env.DB.prepare(`SELECT created_by_user_id FROM rulesets WHERE id = ? LIMIT 1`).bind(id).first<{ created_by_user_id: number }>();
-    if (!existing) 
-      httpError(404, 'Ruleset not found');
+    const row = await c.env.DB.prepare(`SELECT created_by_user_id FROM rulesets WHERE id = ?`).bind(id).first<{ created_by_user_id: number }>();
     
-    return { ownerUserId: existing.created_by_user_id };
+    return { ownerUserId: row?.created_by_user_id ?? -1 };
   }), 
   async (c) => {
     const id = Number(c.req.param('id'));
     
-    await c.env.DB.prepare(`DELETE FROM rulesets WHERE id = ?`).bind(id).run();
+    const result = await c.env.DB.prepare(`DELETE FROM rulesets WHERE id = ?`).bind(id).run();
+    if ((result.meta.changes ?? 0) === 0)
+      httpError(404, "Ruleset not found");
     
     return c.json({ ok: true });
 });

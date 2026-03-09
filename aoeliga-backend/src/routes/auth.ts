@@ -1,5 +1,3 @@
-//TODO styling
-
 import { Hono } from "hono";
 import type { AppBindings } from "../types";
 import { ok, httpError } from "../lib/http";
@@ -11,17 +9,17 @@ function randomState(): string {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
-// POST /auth/logout
 auth.post("/logout", async (c) => {
   const sid = getSessionId(c);
   if (sid) {
     await c.env.DB.prepare(`UPDATE sessions SET revoked_at = datetime('now') WHERE id = ?`).bind(sid).run();
   }
+  
   clearSessionCookie(c);
+  
   return ok(c, { ok: true });
 });
 
-// GET /auth/discord  (start)
 auth.get("/discord", async (c) => {
   const state = randomState();
   const redirectTo = c.req.query("redirect") || "/";
@@ -45,21 +43,23 @@ auth.get("/discord", async (c) => {
   return c.redirect(`https://discord.com/oauth2/authorize?${params.toString()}`);
 });
 
-// GET /auth/discord/callback  (finish)
 auth.get("/discord/callback", async (c) => {
   const code = c.req.query("code");
   const state = c.req.query("state");
-  if (!code || !state) return httpError(400, "Missing code/state");
+  if (!code || !state)
+    httpError(400, "Missing code/state");
 
   // verify state (and delete it)
   const stateRow = await c.env.DB.prepare(
     `SELECT state, redirect_to
      FROM oauth_states
      WHERE state = ?
-       AND expires_at > datetime('now')`
-  ).bind(state).first();
+       AND expires_at > datetime('now')
+     LIMIT 1`
+  ).bind(state).first<{ state: string; redirect_to: string | null }>();
 
-  if (!stateRow) return httpError(400, "Invalid or expired state");
+  if (!stateRow)
+    httpError(400, "Invalid or expired state");
 
   await c.env.DB.prepare(`DELETE FROM oauth_states WHERE state = ?`).bind(state).run();
 
@@ -81,8 +81,10 @@ auth.get("/discord/callback", async (c) => {
     return c.json({ error: "Token exchange failed", details: txt }, 400);
   }
 
-  const tokenJson: any = await tokenRes.json();
-  const accessToken = tokenJson.access_token as string;
+  const tokenJson = (await tokenRes.json()) as { access_token?: string};
+  const accessToken = tokenJson.access_token;
+  if (!accessToken)
+    httpError(400, "Discord token response missing access token");
 
   // fetch user
   const meRes = await fetch("https://discord.com/api/users/@me", {
@@ -94,7 +96,13 @@ auth.get("/discord/callback", async (c) => {
     return c.json({ error: "Failed to fetch user", details: txt }, 400);
   }
 
-  const me: any = await meRes.json();
+  const me = (await meRes.json()) as {
+    id: string;
+    username?: string;
+    global_name?: string | null;
+    avatar?: string | null;
+  };
+
   // me.id, me.discord_name, me.display_name, me.avatar
   // /users/@me is the standard identity endpoint. :contentReference[oaicite:5]{index=5}
 
@@ -103,15 +111,13 @@ auth.get("/discord/callback", async (c) => {
     `INSERT INTO users (discord_id, discord_name, display_name, avatar, last_login_at)
      VALUES (?, ?, ?, ?, datetime('now'))
      ON CONFLICT(discord_id) DO UPDATE SET
-       discord_name = excluded.discord_name,
-       display_name = excluded.display_name,
-       avatar = excluded.avatar,
-       last_login_at = datetime('now')`
+       discord_name = excluded.discord_name, display_name = excluded.display_name, avatar = excluded.avatar, last_login_at = datetime('now')`
   ).bind(me.id, me.username ?? null, me.global_name ?? null, me.avatar ?? null).run();
 
-  const userRow: any = await c.env.DB.prepare(
-    `SELECT id FROM users WHERE discord_id = ?`
-  ).bind(me.id).first();
+  const userRow = await c.env.DB.prepare(`SELECT id FROM users WHERE discord_id = ?`).bind(me.id).first<{ id: number; is_banned: number }>();
+
+  if (!userRow)
+    httpError(500, "Failed to load user after login");
 
   // create session (30 days)
   const sessionId = crypto.randomUUID().replace(/-/g, "");
@@ -120,17 +126,13 @@ auth.get("/discord/callback", async (c) => {
   await c.env.DB.prepare(
     `INSERT INTO sessions (id, user_id, expires_at, user_agent, ip)
      VALUES (?, ?, datetime('now', '+30 days'), ?, ?)`
-  ).bind(
-    sessionId,
-    userRow.id,
-    c.req.header("User-Agent") ?? null,
-    c.req.header("CF-Connecting-IP") ?? null
-  ).run();
+  ).bind(sessionId, userRow.id, c.req.header("User-Agent") ?? null, c.req.header("CF-Connecting-IP") ?? null).run();
 
   setSessionCookie(c, sessionId, maxAgeSeconds);
 
   // redirect back to UI
   const redirectTo = (stateRow as any).redirect_to || "/";
+  
   return c.redirect(`${c.env.APP_ORIGIN}${redirectTo}`);
 });
 
