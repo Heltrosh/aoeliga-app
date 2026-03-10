@@ -19,6 +19,7 @@ import {
   IconLogin,
   IconLogout,
 } from "@tabler/icons-react";
+import { CircleFlag } from "react-circle-flags";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
@@ -26,6 +27,7 @@ import logo from "../assets/aoeligalogo.png";
 import { useAuth } from "../auth/AuthContext";
 import { useI18n } from "../i18n/I18nProvider";
 import { useTournamentHeader } from "../tournament/TournamentHeaderContext";
+
 
 function discordAvatarUrl(discordId: string, avatar: string | null, size = 64) {
   if (!avatar) return null;
@@ -37,7 +39,7 @@ export default function RootLayout() {
   const nav = useNavigate();
   const loc = useLocation();
   const { user, loading, refresh, login, logout } = useAuth();
-  const { locale, setLocale } = useI18n();
+  const { locale, setLocale, t } = useI18n();
   const { title: tournamentTitle } = useTournamentHeader();
 
 
@@ -91,7 +93,7 @@ export default function RootLayout() {
             <Group gap="sm" style={{ cursor: "pointer" }} onClick={() => nav("/")}>
               <Image src={logo} w={45} h={45} radius="xl" />
               <Box>
-                <Text fw={800}>CZ/SK AoE Liga</Text>
+                <Text fw={800}>{t("header.title")}</Text>
                 {inTournament && (
                   <Text size="xs" c="dimmed">
                     {tournamentTitle ?? slug ?? ""} 
@@ -102,16 +104,33 @@ export default function RootLayout() {
           </Group>
 
           <Group gap="xs">
-            <Tooltip label="Switch language" position="bottom">
-              <Button
-                variant="subtle"
-                color="gold"
-                onClick={() => setLocale(locale === "en" ? "cs" : "en")}
-              >
-                {locale.toUpperCase()}
-              </Button>
-            </Tooltip>
+            <Menu position="bottom-end" withArrow>
+              <Menu.Target>
+                <Tooltip label={t("language.switch")} position="bottom">
+                  <ActionIcon variant="subtle" color="gold" aria-label={t("language.switch")}>
+                    <CircleFlag countryCode={locale === "cs" ? "cz" : "gb"} height={18} />
+                  </ActionIcon>
+                </Tooltip>
+              </Menu.Target>
 
+              <Menu.Dropdown>
+                <Menu.Label>{t("language.language")}</Menu.Label>
+
+                <Menu.Item 
+                  onClick={() => setLocale("en")}
+                  leftSection={<CircleFlag countryCode="gb" height={18} style={{ display: 'block', width: 'auto' }} />}
+                >
+                  {t("language.english")}
+                </Menu.Item>
+
+                <Menu.Item 
+                  onClick={() => setLocale("cs")}
+                  leftSection={<CircleFlag countryCode="cz" height={18} style={{ display: 'block', width: 'auto' }} />}
+                >
+                  {t("language.czech")}
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
             <ActionIcon
               variant="subtle"
               onClick={() => setDark((v) => !v)}
@@ -128,7 +147,7 @@ export default function RootLayout() {
                 loading={loading}
                 onClick={handleLogin}
               >
-                Log in
+                {t("auth.login")}
               </Button>
             ) : (
               <Menu position="bottom-end" withArrow>
@@ -156,9 +175,9 @@ export default function RootLayout() {
                 </Menu.Target>
 
                 <Menu.Dropdown>
-                  <Menu.Label>Account</Menu.Label>
+                  <Menu.Label>{t("auth.account")}</Menu.Label>
                   <Menu.Item leftSection={<IconUser size={16} />} disabled>
-                    Profile (soon)
+                    {t("auth.profile")}
                   </Menu.Item>
                   <Menu.Divider />
                   <Menu.Item
@@ -166,7 +185,7 @@ export default function RootLayout() {
                     leftSection={<IconLogout size={16} />}
                     onClick={handleLogout}
                   >
-                    Log out
+                    {t("auth.logout")}
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>

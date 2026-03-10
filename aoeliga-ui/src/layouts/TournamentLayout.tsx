@@ -10,6 +10,7 @@ import { useEffect } from "react";
 
 import { TournamentProvider, useTournament } from "../tournament/TournamentContext";
 import { useTournamentHeader } from "../tournament/TournamentHeaderContext";
+import { useI18n } from "../i18n/I18nProvider";
 
 function TournamentChrome() {
   const nav = useNavigate();
@@ -17,6 +18,8 @@ function TournamentChrome() {
   const { slug } = useParams();
   const { tournament } = useTournament();
   const { setTitle } = useTournamentHeader();
+  const { t } = useI18n();
+  
 
   useEffect(() => {
     setTitle(tournament?.name ?? null);
@@ -26,10 +29,10 @@ function TournamentChrome() {
   const base = slug ? `/t/${slug}` : "";
 
   const navItems = [
-    { label: "Dashboard", to: `${base}/dashboard`, icon: <IconLayoutDashboard size={18} /> },
-    { label: "Divisions", to: `${base}/divisions`, icon: <IconStack2 size={18} /> },
-    { label: "Schedule", to: `${base}/schedule`, icon: <IconCalendarEvent size={18} /> },
-    { label: "Players", to: `${base}/players`, icon: <IconUsers size={18} /> },
+    { label: t("nav.dashboard"), to: `${base}/dashboard`, icon: <IconLayoutDashboard size={18} /> },
+    { label: t("nav.divisions"), to: `${base}/divisions`, icon: <IconStack2 size={18} /> },
+    { label: t("nav.schedule"), to: `${base}/schedule`, icon: <IconCalendarEvent size={18} /> },
+    { label: t("nav.players"), to: `${base}/players`, icon: <IconUsers size={18} /> },
   ];
 
   return (

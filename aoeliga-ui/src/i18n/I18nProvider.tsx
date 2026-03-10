@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { en } from "./messages/en";
+import { en, type TranslationKey } from "./messages/en";
 import { cs } from "./messages/cs";
 import {
   type Locale,
@@ -8,8 +8,6 @@ import {
 } from "./locale";
 
 const messages = { en, cs };
-
-export type TranslationKey = keyof typeof en;
 
 type I18nContextValue = {
   locale: Locale;
@@ -27,7 +25,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, [locale]);
 
   function t(key: TranslationKey) {
-    return messages[locale][key] ?? key;
+    return messages[locale][key];
   }
 
   return (

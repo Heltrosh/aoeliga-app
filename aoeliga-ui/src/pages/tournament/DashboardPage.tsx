@@ -1,13 +1,16 @@
 import { Text, Title } from "@mantine/core";
 import { useTournament } from "../../tournament/TournamentContext";
+import { useI18n } from "../../i18n/I18nProvider";
 
 export default function DashboardPage() {
   const { tournament } = useTournament();
+  const { t } = useI18n();
+
 
   return (
     <>
       <Title order={2}>{tournament?.name ?? "Tournament"}</Title>
-      <Text c="dimmed">Tournament dashboard placeholder.</Text>
+      <Text c="dimmed">{t("tournament.placeholder")}</Text>
     </>
   );
 }

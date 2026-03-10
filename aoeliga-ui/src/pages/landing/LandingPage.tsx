@@ -25,6 +25,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { listTournaments, createTournament } from "../../api/tournaments";
 import { useAuth } from "../../auth/AuthContext";
+import { useI18n } from "../../i18n/I18nProvider";
 
 type Tournament = {
   id: number;
@@ -54,6 +55,7 @@ export default function LandingPage() {
   const nav = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { t } = useI18n();
 
   const isGlobalAdmin = user?.is_admin === 1;
 
@@ -108,7 +110,7 @@ export default function LandingPage() {
     <Container size="lg" py="xl">
       <Group justify="space-between" align="end" mb="lg">
         <div>
-          <Title order={1}>CZ/SK AoE Liga</Title>
+          <Title order={1}>{t("landing.title")}</Title>
           <Text c="dimmed">Seasons, divisions, schedule, standings.</Text>
         </div>
 
