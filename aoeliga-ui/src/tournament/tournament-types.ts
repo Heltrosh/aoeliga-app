@@ -1,11 +1,11 @@
 export type TournamentRole = "admin" | "moderator" | null;
 
 export type TournamentViewer = {
-  isAuthenticated: boolean;
-  isGlobalAdmin: boolean;
-  tournamentRole: TournamentRole;
-  isTournamentStreamer: boolean;
-  isTournamentPlayer: boolean;
+  is_authenticated: boolean;
+  is_global_admin: boolean;
+  tournament_role: TournamentRole;
+  is_tournament_streamer: boolean;
+  is_tournament_player: boolean;
 };
 
 export type Tournament = {
@@ -16,9 +16,10 @@ export type Tournament = {
   status: string;
   starts_at: string | null;
   ends_at: string | null;
+  created_at?: string; 
 };
 
 export type TournamentDetailResponse = {
   tournament: Tournament;
-  viewer?: TournamentViewer;
+  viewer: TournamentViewer;
 };

@@ -1,15 +1,12 @@
 import { Box, NavLink } from "@mantine/core";
-import {
-  IconLayoutDashboard,
-  IconStack2,
-  IconCalendarEvent,
-  IconUsers,
-} from "@tabler/icons-react";
+import { IconLayoutDashboard, IconStack2, IconCalendarEvent, IconUsers, IconSettings } from "@tabler/icons-react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useEffect } from "react";
 
-import { TournamentProvider, useTournament } from "../tournament/TournamentContext";
-import { useTournamentHeader } from "../tournament/TournamentHeaderContext";
+import { TournamentProvider } from "../tournament/TournamentContext";
+import { useTournament } from "../hooks/useTournament";
+import { useTournamentAccess } from "../hooks/useTournamentAccess";
+import { useTournamentHeader } from "../hooks/useTournamentHeader";
 import { useI18n } from "../i18n/I18nProvider";
 
 function TournamentChrome() {
@@ -19,6 +16,8 @@ function TournamentChrome() {
   const { tournament } = useTournament();
   const { setTitle } = useTournamentHeader();
   const { t } = useI18n();
+  const access = useTournamentAccess();
+  
   
 
   useEffect(() => {
@@ -33,6 +32,9 @@ function TournamentChrome() {
     { label: t("nav.divisions"), to: `${base}/divisions`, icon: <IconStack2 size={18} /> },
     { label: t("nav.schedule"), to: `${base}/schedule`, icon: <IconCalendarEvent size={18} /> },
     { label: t("nav.players"), to: `${base}/players`, icon: <IconUsers size={18} /> },
+    ...(access.canManageTournament || access.isTournamentModerator
+    ? [{ label: t("nav.administration"), to: `${base}/admin`, icon: <IconSettings size={18} /> }]
+    : []),
   ];
 
   return (

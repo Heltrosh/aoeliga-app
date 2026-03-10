@@ -1,16 +1,18 @@
-import { createContext, useContext } from "react";
+import { createContext } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import { getTournament } from "../api/tournaments";
+import type { Tournament, TournamentViewer } from "./tournament-types";
 
 type TournamentContextValue = {
-  tournament: any | null;
+  tournament: Tournament | null;
+  viewer: TournamentViewer | null;
   loading: boolean;
   error: boolean;
 };
 
-const TournamentContext = createContext<TournamentContextValue | null>(null);
+export const TournamentContext = createContext<TournamentContextValue | null>(null);
 
 export function TournamentProvider({ children }: { children: React.ReactNode }) {
   const { slug } = useParams();
@@ -25,6 +27,7 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
     <TournamentContext.Provider
       value={{
         tournament: query.data?.tournament ?? null,
+        viewer: query.data?.viewer ?? null,
         loading: query.isLoading,
         error: query.isError,
       }}
@@ -32,12 +35,4 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
       {children}
     </TournamentContext.Provider>
   );
-}
-
-export function useTournament() {
-  const ctx = useContext(TournamentContext);
-  if (!ctx) {
-    throw new Error("TournamentProvider is missing");
-  }
-  return ctx;
 }

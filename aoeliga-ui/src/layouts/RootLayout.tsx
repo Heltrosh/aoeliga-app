@@ -26,7 +26,7 @@ import { useState } from "react";
 import logo from "../assets/aoeligalogo.png";
 import { useAuth } from "../auth/AuthContext";
 import { useI18n } from "../i18n/I18nProvider";
-import { useTournamentHeader } from "../tournament/TournamentHeaderContext";
+import { useTournamentHeader } from "../hooks/useTournamentHeader";
 
 
 function discordAvatarUrl(discordId: string, avatar: string | null, size = 64) {
@@ -160,7 +160,7 @@ export default function RootLayout() {
                   >
                     <Group gap={8} wrap="nowrap">
                       {user.avatar ? (
-                        <Avatar size={24} radius="xl" src={avatarUrl ?? undefined} />
+                        <Avatar size={30} radius="xl" src={avatarUrl ?? undefined} />
                       ) : (
                         <Avatar size={24} radius="xl">
                           <IconUser size={14} />

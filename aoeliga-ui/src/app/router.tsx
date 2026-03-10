@@ -8,6 +8,7 @@ import DashboardPage from "../pages/tournament/DashboardPage";
 import DivisionsPage from "../pages/tournament/DivisionsPage";
 import SchedulePage from "../pages/tournament/SchedulePage";
 import PlayersPage from "../pages/tournament/PlayersPage";
+import AdminPage from "../pages/tournament/AdminPage";
 
 export const router = createBrowserRouter([
   {
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
           { path: "divisions", element: <DivisionsPage /> },
           { path: "schedule", element: <SchedulePage /> },
           { path: "players", element: <PlayersPage /> },
+          { path: "admin", element: <AdminPage /> },
         ],
       },
     ],

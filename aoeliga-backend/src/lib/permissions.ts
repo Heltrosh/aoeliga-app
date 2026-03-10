@@ -19,7 +19,8 @@ export type PermissionAction =
   | 'match.schedule.own'
   | 'replay.upload.own'
   | 'ruleset.create'
-  | 'ruleset.update.own';
+  | 'ruleset.update.own'
+  | 'user.lightweight';
 
 type PermissionExtras = {
   matchId?: number;
@@ -84,7 +85,9 @@ export async function can(c: Context<AppBindings>, action: PermissionAction, ext
     case 'replay.upload.own':
       return !!tournament && isPlayer && !!extras.matchId
         ? await isOwnMatchParticipant(c, extras.matchId)
-        : false;    
+        : false;
+    case 'user.lightweight':
+      return await isTournamentAdminAnywhere(c, user.id) || await isTournamentModeratorAnywhere(c, user.id) ;
     default:
       return false;
   }
@@ -113,6 +116,20 @@ async function isTournamentAdminAnywhere(c: Context<AppBindings>, userId: number
 
   return !!row;
 }
+
+async function isTournamentModeratorAnywhere(c: Context<AppBindings>, userId: number): Promise<boolean> {
+  const row = await c.env.DB.prepare(
+    `SELECT 1 as ok
+     FROM tournament_admins
+     WHERE user_id = ?
+       AND role = 'moderator'
+     LIMIT 1`
+  )
+    .bind(userId).first<{ ok: number }>();
+
+  return !!row;
+}
+
 
 export function isGlobalAdmin(user: AuthUser | null): boolean {
   return !!user && user.is_admin === 1;

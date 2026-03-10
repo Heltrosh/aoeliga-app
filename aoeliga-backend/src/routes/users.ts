@@ -7,6 +7,17 @@ const users = new Hono<AppBindings>();
 
 users.use('*', requireUser);
 
+users.get('/', requirePermission('user.lightweight'), async(c) => {
+  const rows = await c.env.DB.prepare(
+    `SELECT id, discord_id, discord_name, display_name, avatar
+     FROM users
+     ORDER BY coalesce (display_name, discord_name) ASC`
+  ).all();
+  
+  return c.json({ users: rows.results ?? [] });
+  
+});
+
 users.get('/search', requirePermission('user.search'), async (c) => {
   const q = (c.req.query('q') ?? '').trim();
   if (!q) 

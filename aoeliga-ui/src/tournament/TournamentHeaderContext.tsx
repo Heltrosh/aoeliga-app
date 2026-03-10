@@ -1,11 +1,11 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useState } from "react";
 
 type TournamentHeaderContextValue = {
   title: string | null;
   setTitle: (title: string | null) => void;
 };
 
-const TournamentHeaderContext = createContext<TournamentHeaderContextValue | null>(null);
+export const TournamentHeaderContext = createContext<TournamentHeaderContextValue | null>(null);
 
 export function TournamentHeaderProvider({
   children,
@@ -19,12 +19,4 @@ export function TournamentHeaderProvider({
       {children}
     </TournamentHeaderContext.Provider>
   );
-}
-
-export function useTournamentHeader() {
-  const ctx = useContext(TournamentHeaderContext);
-  if (!ctx) {
-    throw new Error("TournamentHeaderProvider is missing");
-  }
-  return ctx;
 }

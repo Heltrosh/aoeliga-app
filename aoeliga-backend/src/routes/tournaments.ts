@@ -13,8 +13,23 @@ tournaments.get('/', async (c) => {
   return c.json({ tournaments: rows.results ?? [] });
 });
 
-tournaments.get('/:slug', optionalUser, withTournamentBySlug, async (c) => {
-  return c.json({ tournament: c.get('tournament') });
+tournaments.get('/:slug', optionalUser, withTournamentBySlug, withTournamentAccess, async (c) => {
+  const user = c.get("user");
+  const tournament = c.get("tournament");
+  const tournamentRole = c.get("tournamentRole");
+  const isTournamentStreamer = c.get("isTournamentStreamer");
+  const isTournamentPlayer = c.get("isTournamentPlayer");
+
+  return c.json({
+    tournament,
+    viewer: {
+      is_authenticated: !!user,
+      is_global_admin: user?.is_admin === 1,
+      tournament_role: tournamentRole,
+      is_tournament_streamer: isTournamentStreamer,
+      is_tournament_player: isTournamentPlayer,
+    },
+  });
 });
 
 tournaments.put('/:slug', requireUser, withTournamentBySlug, withTournamentAccess, withTournamentAccess, requirePermission('tournament.update'), async (c) => {
@@ -96,7 +111,7 @@ tournaments.get('/:slug/admins', optionalUser, withTournamentBySlug, async (c) =
   const t = c.get('tournament')!;
   
   const rows = await c.env.DB.prepare(
-    `SELECT ta.user_id, ta.role, ta.created_at, u.discord_name, u.display_name, u.avatar
+    `SELECT ta.user_id, ta.role, u.discord_id, u.discord_name, u.display_name, u.avatar
      FROM tournament_admins ta
      JOIN users u ON u.id = ta.user_id
      WHERE ta.tournament_id = ?
@@ -153,12 +168,12 @@ tournaments.get('/:slug/streamers', optionalUser, withTournamentBySlug, async (c
   const t = c.get('tournament')!;
   
   const rows = await c.env.DB.prepare(
-    `SELECT ts.user_id, ts.display_name, ts.stream_url, ts.language, ts.created_at,
-            u.discord_name, u.display_name as user_display_name, u.avatar
+    `SELECT ts.user_id, ts.stream_url,
+            u.discord_id, u.discord_name, u.display_name as user_display_name, u.avatar
      FROM tournament_streamers ts
      JOIN users u ON u.id = ts.user_id
      WHERE ts.tournament_id = ?
-     ORDER BY coalesce(ts.display_name, u.display_name, u.discord_name) ASC`
+     ORDER BY coalesce(u.display_name, u.discord_name) ASC`
   ).bind(t.id).all();
   
   return c.json({ streamers: rows.results ?? [] });
@@ -172,11 +187,11 @@ tournaments.post('/:slug/streamers', requireUser, withTournamentBySlug, withTour
     httpError(400, 'user_id is required');
   
   await c.env.DB.prepare(
-    `INSERT INTO tournament_streamers (tournament_id, user_id, display_name, stream_url, language)
-     VALUES (?, ?, ?, ?, ?)
+    `INSERT INTO tournament_streamers (tournament_id, user_id, stream_url)
+     VALUES (?, ?, ?)
      ON CONFLICT(tournament_id, user_id) DO UPDATE SET
-       display_name = excluded.display_name, stream_url = excluded.stream_url, language = excluded.language`
-  ).bind(t.id, body.user_id, body.display_name ?? null, body.stream_url ?? null, body.language ?? null).run();
+       stream_url = excluded.stream_url`
+  ).bind(t.id, body.user_id, body.stream_url ?? null).run();
   
   return c.json({ ok: true }, 201);
 });
@@ -190,9 +205,9 @@ tournaments.put('/:slug/streamers/:userId', requireUser, withTournamentBySlug, w
   
   await c.env.DB.prepare(
     `UPDATE tournament_streamers
-     SET display_name = ?, stream_url = ?, language = ?
+     SET stream_url = ?
      WHERE tournament_id = ? AND user_id = ?`
-  ).bind(body.display_name ?? null, body.stream_url ?? null, body.language ?? null, t.id, userId).run();
+  ).bind(body.stream_url ?? null, t.id, userId).run();
   
   return c.json({ ok: true });
 });
@@ -216,7 +231,7 @@ tournaments.get('/:slug/players', optionalUser, withTournamentBySlug, async (c) 
   const t = c.get('tournament')!;
   
   const rows = await c.env.DB.prepare(
-    `SELECT tp.*, u.discord_name, u.display_name, u.avatar, d.name as division_name
+    `SELECT tp.*, u.discord_id, u.discord_name, u.display_name, u.avatar, d.name as division_name
      FROM tournament_players tp
      JOIN users u ON u.id = tp.user_id
      LEFT JOIN divisions d ON d.id = tp.division_id
@@ -234,7 +249,7 @@ tournaments.get('/:slug/players/:playerId', optionalUser, withTournamentBySlug, 
     httpError(400, "Invalid player id");
   
   const row = await c.env.DB.prepare(
-    `SELECT tp.*, u.discord_name, u.display_name, u.avatar, d.name as division_name
+    `SELECT tp.*, u.discord_id, u.discord_name, u.display_name, u.avatar, d.name as division_name
      FROM tournament_players tp
      JOIN users u ON u.id = tp.user_id
      LEFT JOIN divisions d ON d.id = tp.division_id

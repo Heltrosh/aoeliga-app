@@ -10,12 +10,13 @@ export const en = {
   "nav.divisions": "Divisions",
   "nav.schedule": "Schedule",
   "nav.players": "Players",
+  "nav.administration": "Administration",
 
+  "tournament.dashboard": "Dashboard",
   "tournament.loading": "Loading...",
   "tournament.placeholder": "Tournament dashboard placeholder.",
 
   "landing.title": "Tournaments",
-  "landing.subtitle": "Seasons, divisions, schedule, standings.",
   "landing.empty": "No tournaments available yet.",
 
   "language.english": "English",

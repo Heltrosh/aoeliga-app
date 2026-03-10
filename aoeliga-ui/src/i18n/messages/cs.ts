@@ -12,12 +12,13 @@ export const cs = {
   "nav.divisions": "Divize",
   "nav.schedule": "Rozpis",
   "nav.players": "Hráči",
+  "nav.administration": "Administrace",
 
+  "tournament.dashboard": "Přehled",
   "tournament.loading": "Načítání...",
   "tournament.placeholder": "Ukázkový přehled turnaje.",
 
   "landing.title": "Turnaje",
-  "landing.subtitle": "Sezóny, divize, harmonogram, pořadí.",
   "landing.empty": "Zatím nejsou žádné turnaje.",
 
   "language.english": "Angličtina",

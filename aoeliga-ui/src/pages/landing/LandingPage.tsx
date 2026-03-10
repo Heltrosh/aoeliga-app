@@ -111,7 +111,6 @@ export default function LandingPage() {
       <Group justify="space-between" align="end" mb="lg">
         <div>
           <Title order={1}>{t("landing.title")}</Title>
-          <Text c="dimmed">Seasons, divisions, schedule, standings.</Text>
         </div>
 
         {isGlobalAdmin && (

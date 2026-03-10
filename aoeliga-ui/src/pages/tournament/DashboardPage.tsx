@@ -1,5 +1,5 @@
 import { Text, Title } from "@mantine/core";
-import { useTournament } from "../../tournament/TournamentContext";
+import { useTournament } from "../../hooks/useTournament";
 import { useI18n } from "../../i18n/I18nProvider";
 
 export default function DashboardPage() {
@@ -9,7 +9,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Title order={2}>{tournament?.name ?? "Tournament"}</Title>
+      <Title order={2}>{t("tournament.dashboard")}</Title>
       <Text c="dimmed">{t("tournament.placeholder")}</Text>
     </>
   );
