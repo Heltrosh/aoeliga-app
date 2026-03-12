@@ -1,32 +1,46 @@
 import { api } from "./client";
 import {
   tournamentAdminsResponseSchema,
-  tournamentDetailResponseSchema,
+  listTournamentsResponseSchema,
+  createTournamentInputSchema,
+  updateTournamentInputSchema,
+  tournamentContextResponseSchema,
   tournamentPlayersResponseSchema,
   tournamentStreamersResponseSchema,
   type TournamentAdminRow,
-  type TournamentDetailResponse,
+  type ListTournamentsResponse,
+  type CreateTournamentInput,
+  type UpdateTournamentInput,
+  type TournamentContextResponse,
   type TournamentPlayerRow,
   type TournamentStreamerRow,
 } from "./schemas/tournaments";
 
-export function listTournaments() {
-  return api.get("/api/tournaments");
+export async function listTournaments(): Promise<ListTournamentsResponse> {
+  const json = await api.get("/api/tournaments");
+  return listTournamentsResponseSchema.parse(json);
 }
 
-export async function getTournament(slug: string): Promise<TournamentDetailResponse> {
+export async function getTournamentBySlug(slug: string): Promise<TournamentContextResponse> {
   const json = await api.get(`/api/tournaments/${slug}`);
-  return tournamentDetailResponseSchema.parse(json);
+  return tournamentContextResponseSchema.parse(json);
 }
 
-export function createTournament(body: {
-  slug: string;
-  name: string;
-  description?: string | null;
-  starts_at?: string | null;
-  ends_at?: string | null;
-}) {
-  return api.post("/api/admin/tournaments", body);
+export async function createTournament(input: CreateTournamentInput) {
+  const payload = createTournamentInputSchema.parse(input);
+  return api.post("/api/admin/tournaments", payload);
+}
+
+export async function updateTournament(
+  slug: string,
+  input: UpdateTournamentInput,
+) {
+  const payload = updateTournamentInputSchema.parse(input);
+  return api.put(`/api/tournaments/${slug}`, payload);
+}
+
+export async function deleteTournament(slug: string) {
+  return api.delete(`/api/admin/tournaments/${slug}`);
 }
 
 export type { TournamentAdminRow, TournamentStreamerRow, TournamentPlayerRow };
@@ -44,7 +58,7 @@ export function addTournamentAdmin(
 }
 
 export function removeTournamentAdmin(slug: string, userId: number) {
-  return api.del(`/api/tournaments/${slug}/admins/${userId}`);
+  return api.delete(`/api/tournaments/${slug}/admins/${userId}`);
 }
 
 export async function getTournamentStreamers(
@@ -59,7 +73,7 @@ export function addTournamentStreamer(slug: string, body: { user_id: number }) {
 }
 
 export function removeTournamentStreamer(slug: string, userId: number) {
-  return api.del(`/api/tournaments/${slug}/streamers/${userId}`);
+  return api.delete(`/api/tournaments/${slug}/streamers/${userId}`);
 }
 
 export async function getTournamentPlayers(
@@ -77,5 +91,5 @@ export function addTournamentPlayer(
 }
 
 export function removeTournamentPlayer(slug: string, playerId: number) {
-  return api.del(`/api/tournaments/${slug}/players/${playerId}`);
+  return api.delete(`/api/tournaments/${slug}/players/${playerId}`);
 }

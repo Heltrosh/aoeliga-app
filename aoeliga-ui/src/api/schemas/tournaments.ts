@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { tournamentStatusSchema } from "./statuses";
+
 export const tournamentRoleSchema = z.union([z.literal("admin"), z.literal("moderator"), z.null()]);
 
 export const tournamentViewerSchema = z.object({
@@ -24,13 +26,49 @@ export const tournamentSchema = z.object({
   slug: z.string(),
   name: z.string(),
   description: z.string().nullable(),
-  status: z.string(),
+  status: tournamentStatusSchema,
   starts_at: z.string().nullable(),
   ends_at: z.string().nullable(),
   created_at: z.string().optional(),
 });
 
-export const tournamentDetailResponseSchema = z.object({
+export const tournamentListCapabilitiesSchema = z.object({
+  can_edit: z.boolean(),
+  can_delete: z.boolean(),
+});
+
+export const tournamentListItemSchema = z.object({
+  id: z.number(),
+  slug: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  status: tournamentStatusSchema,
+  starts_at: z.string().nullable(),
+  ends_at: z.string().nullable(),
+  capabilities: tournamentListCapabilitiesSchema,
+});
+
+export const listTournamentsResponseSchema = z.object({
+  tournaments: z.array(tournamentListItemSchema),
+});
+
+export const createTournamentInputSchema = z.object({
+  slug: z.string().min(1, "Slug is required"),
+  name: z.string().min(1, "Name is required"),
+  description: z.string().nullable(),
+  starts_at: z.string().nullable(),
+  ends_at: z.string().nullable(),
+});
+
+export const updateTournamentInputSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  description: z.string().nullable(),
+  status: tournamentStatusSchema,
+  starts_at: z.string().nullable(),
+  ends_at: z.string().nullable(),
+});
+
+export const tournamentContextResponseSchema = z.object({
   tournament: tournamentSchema,
   viewer: tournamentViewerSchema,
   capabilities: tournamentCapabilitiesSchema,
@@ -83,7 +121,11 @@ export type TournamentRole = z.infer<typeof tournamentRoleSchema>;
 export type TournamentViewer = z.infer<typeof tournamentViewerSchema>;
 export type TournamentCapabilities = z.infer<typeof tournamentCapabilitiesSchema>;
 export type Tournament = z.infer<typeof tournamentSchema>;
-export type TournamentDetailResponse = z.infer<typeof tournamentDetailResponseSchema>;
+export type TournamentListItem = z.infer<typeof tournamentListItemSchema>;
+export type ListTournamentsResponse = z.infer<typeof listTournamentsResponseSchema>;
+export type CreateTournamentInput = z.infer<typeof createTournamentInputSchema>;
+export type UpdateTournamentInput = z.infer<typeof updateTournamentInputSchema>;
+export type TournamentContextResponse = z.infer<typeof tournamentContextResponseSchema>;
 export type TournamentAdminRow = z.infer<typeof tournamentAdminRowSchema>;
 export type TournamentStreamerRow = z.infer<typeof tournamentStreamerRowSchema>;
 export type TournamentPlayerRow = z.infer<typeof tournamentPlayerRowSchema>;

@@ -1,7 +1,7 @@
 export type {
   Tournament,
   TournamentCapabilities,
-  TournamentDetailResponse,
+  TournamentContextResponse,
   TournamentRole,
   TournamentViewer,
 } from "../api/schemas/tournaments";

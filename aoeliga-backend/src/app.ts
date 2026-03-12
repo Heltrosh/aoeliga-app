@@ -3,7 +3,7 @@ import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 
 
-import type { AppBindings } from './types';
+import type { AppBindings } from './types/app';
 
 import admin from './routes/admin';
 import me from './routes/me';

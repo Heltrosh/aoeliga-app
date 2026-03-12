@@ -9,7 +9,10 @@ CREATE TABLE IF NOT EXISTS users (
   is_admin      INTEGER NOT NULL DEFAULT 0,
   is_banned     INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-  last_login_at TEXT
+  last_login_at TEXT,
+
+  CHECK (is_admin IN (0, 1)),
+  CHECK (is_banned IN (0, 1))
 );
 
 CREATE TABLE IF NOT EXISTS tournaments (
@@ -17,10 +20,12 @@ CREATE TABLE IF NOT EXISTS tournaments (
   slug          TEXT NOT NULL UNIQUE,
   name          TEXT NOT NULL,
   description   TEXT,
-  status        TEXT NOT NULL DEFAULT 'draft', -- draft|active|completed|archived
+  status        TEXT NOT NULL DEFAULT 'draft', -- draft|signup|active|completed|archived
   starts_at     TEXT,
   ends_at       TEXT,
-  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+
+  CHECK (status IN ('draft', 'signup', 'active', 'completed', 'archived'))
 );
 
 CREATE TABLE IF NOT EXISTS rulesets (
@@ -45,13 +50,43 @@ CREATE TABLE IF NOT EXISTS divisions (
   UNIQUE (tournament_id, name)
 );
 
+CREATE TABLE IF NOT EXISTS tournament_registrations (
+  id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+  tournament_id             INTEGER NOT NULL,
+  user_id                   INTEGER NOT NULL,
+  aoe_id                    TEXT NOT NULL,
+  signup_rating             INTEGER,
+  signup_max_rating         INTEGER,
+  signup_team_rating        INTEGER,
+  signup_max_team_rating    INTEGER,
+  current_rating            INTEGER,
+  current_max_rating        INTEGER,
+  current_team_rating       INTEGER,
+  current_max_team_rating   INTEGER,
+  current_rating_fetched_at TEXT,
+  status                    TEXT NOT NULL DEFAULT 'pending', -- pending|approved|rejected|withdrawn
+  submitted_at              TEXT NOT NULL DEFAULT (datetime('now')),
+  reviewed_at               TEXT,
+  reviewed_by               INTEGER,
+  note                      TEXT,
+
+  FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+
+  UNIQUE (tournament_id, user_id),
+  UNIQUE (tournament_id, aoe_id),
+
+  CHECK (status IN ('pending', 'approved', 'rejected', 'withdrawn'))
+);
+
 CREATE TABLE IF NOT EXISTS tournament_players (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   tournament_id INTEGER NOT NULL,
   user_id       INTEGER NOT NULL,
   division_id   INTEGER,
   seed          INTEGER,
-  status        TEXT NOT NULL DEFAULT 'pending', -- pending|active|rejected|withdrawn|banned
+  status        TEXT NOT NULL DEFAULT 'active', -- active|withdrawn|banned
   joined_at     TEXT NOT NULL DEFAULT (datetime('now')),
   aoe_id        TEXT NOT NULL,
 
@@ -60,7 +95,9 @@ CREATE TABLE IF NOT EXISTS tournament_players (
   FOREIGN KEY (division_id) REFERENCES divisions(id) ON DELETE RESTRICT,
 
   UNIQUE (tournament_id, user_id),
-  UNIQUE (tournament_id, aoe_id)
+  UNIQUE (tournament_id, aoe_id),
+
+  CHECK (status IN ('active', 'withdrawn', 'banned'))
 );
 
 CREATE TABLE IF NOT EXISTS tournament_admins (
@@ -70,7 +107,9 @@ CREATE TABLE IF NOT EXISTS tournament_admins (
 
   PRIMARY KEY (tournament_id, user_id),
   FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+
+  CHECK (role IN ('admin', 'moderator'))
 );
 
 CREATE TABLE IF NOT EXISTS tournament_streamers (
@@ -95,13 +134,17 @@ CREATE TABLE IF NOT EXISTS matches (
   player1_points INTEGER NOT NULL DEFAULT 0,
   player2_points INTEGER NOT NULL DEFAULT 0,
   scheduled_for  TEXT,
-  status         TEXT NOT NULL DEFAULT 'created', -- created|scheduled|played|forfeited
+  status         TEXT NOT NULL DEFAULT 'created', -- created|scheduled|awaiting_report|played|forfeited
   played_on      TEXT,
 
   FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
   FOREIGN KEY (division_id) REFERENCES divisions(id) ON DELETE CASCADE,
   FOREIGN KEY (player1_id) REFERENCES tournament_players(id) ON DELETE RESTRICT,
-  FOREIGN KEY (player2_id) REFERENCES tournament_players(id) ON DELETE RESTRICT
+  FOREIGN KEY (player2_id) REFERENCES tournament_players(id) ON DELETE RESTRICT,
+
+  CHECK (stage IN ('group', 'playoffs', 'custom')),
+  CHECK (status IN ('created', 'scheduled', 'awaiting_report', 'played', 'forfeited')),
+  CHECK (player1_id <> player2_id)  
 );
 
 CREATE TABLE IF NOT EXISTS replays (
@@ -114,14 +157,16 @@ CREATE TABLE IF NOT EXISTS replays (
   file_size_bytes   INTEGER,
   content_hash      TEXT,
   original_filename TEXT,
-  parse_status      TEXT NOT NULL DEFAULT 'pending', -- pending|parsed|failed
+  parse_status      TEXT NOT NULL DEFAULT 'pending', -- pending|parsing|parsed|failed
   parse_error       TEXT,
 
   FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
   FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
   FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL,
 
-  UNIQUE (tournament_id, r2_object_key)
+  UNIQUE (tournament_id, r2_object_key),
+
+  CHECK (parse_status IN ('pending', 'parsing' ,'parsed', 'failed'))
 );
 
 CREATE TABLE IF NOT EXISTS match_units (
@@ -142,18 +187,43 @@ CREATE TABLE IF NOT EXISTS match_units (
   CHECK (winner_id <> loser_id)
 );
 
+CREATE TABLE IF NOT EXISTS match_vods (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  match_id   INTEGER NOT NULL,
+  url        TEXT NOT NULL,
+  added_by   INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+
+  FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+  FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_divisions_tournament         ON divisions(tournament_id);
 CREATE INDEX IF NOT EXISTS idx_rulesets_creator             ON rulesets(created_by_user_id);
+
+CREATE INDEX IF NOT EXISTS idx_tr_tournament                     ON tournament_registrations(tournament_id);
+CREATE INDEX IF NOT EXISTS idx_tr_tournament_status              ON tournament_registrations(tournament_id, status);
+CREATE INDEX IF NOT EXISTS idx_tr_user                           ON tournament_registrations(user_id);
+CREATE INDEX IF NOT EXISTS idx_tr_reviewed_by                    ON tournament_registrations(reviewed_by);
+
 CREATE INDEX IF NOT EXISTS idx_tp_tournament                ON tournament_players(tournament_id);
 CREATE INDEX IF NOT EXISTS idx_tp_division                  ON tournament_players(division_id);
 CREATE INDEX IF NOT EXISTS idx_tp_tournament_status         ON tournament_players(tournament_id, status);
+
 CREATE INDEX IF NOT EXISTS idx_ta_user                      ON tournament_admins(user_id);
 CREATE INDEX IF NOT EXISTS idx_ts_user                      ON tournament_streamers(user_id);
+
 CREATE INDEX IF NOT EXISTS idx_matches_tournament           ON matches(tournament_id);
 CREATE INDEX IF NOT EXISTS idx_matches_div_stage_round      ON matches(division_id, stage, round_number);
 CREATE INDEX IF NOT EXISTS idx_matches_div_stage_week       ON matches(division_id, stage, week_number);
 CREATE INDEX IF NOT EXISTS idx_matches_players              ON matches(player1_id, player2_id);
+CREATE INDEX IF NOT EXISTS idx_matches_status               ON matches(status);
+
 CREATE INDEX IF NOT EXISTS idx_replays_tournament_status    ON replays(tournament_id, parse_status);
 CREATE INDEX IF NOT EXISTS idx_replays_match                ON replays(match_id);
+
 CREATE INDEX IF NOT EXISTS idx_units_match                  ON match_units(match_id);
 CREATE INDEX IF NOT EXISTS idx_units_winner                 ON match_units(winner_id);
+
+CREATE INDEX IF NOT EXISTS idx_match_vods_match             ON match_vods(match_id);
+CREATE INDEX IF NOT EXISTS idx_match_vods_added_by          ON match_vods(added_by);

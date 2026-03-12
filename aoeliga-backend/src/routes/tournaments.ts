@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { AppBindings } from '../types';
+import type { AppBindings } from '../types/app';
 import { requireUser, optionalUser } from '../lib/auth_session';
 import { httpError } from '../lib/http';
 import { requirePermission, can } from '../lib/permissions';
@@ -7,10 +7,67 @@ import { withTournamentAccess, withTournamentBySlug } from '../lib/tournament';
 
 const tournaments = new Hono<AppBindings>();
 
-tournaments.get('/', async (c) => {
-  const rows = await c.env.DB.prepare(`SELECT * FROM tournaments ORDER BY created_at DESC`).all();
-  
-  return c.json({ tournaments: rows.results ?? [] });
+tournaments.get("/", optionalUser, async (c) => {
+  const user = c.get("user");
+
+  const isGlobalAdmin = user?.is_admin === 1;
+  const userId = user?.id ?? null;
+
+  const sql = `
+    SELECT t.id, t.slug, t.name, t.description, t.status, t.starts_at, t.ends_at, t.created_at,
+      CASE
+        WHEN ? = 1 THEN 1
+        WHEN ta.role = 'admin' THEN 1
+        ELSE 0
+      END AS can_edit,
+
+      CASE
+        WHEN ? = 1 THEN 1
+        ELSE 0
+      END AS can_delete
+
+    FROM tournaments t
+    LEFT JOIN tournament_admins ta
+      ON ta.tournament_id = t.id
+      AND ta.user_id = ?
+
+    WHERE
+      t.status != 'draft'
+      OR ? = 1
+      OR ta.role IN ('admin', 'moderator')
+
+    ORDER BY
+      CASE t.status
+        WHEN 'draft' THEN 1
+        WHEN 'signup' THEN 2
+        WHEN 'active' THEN 3
+        WHEN 'completed' THEN 4
+        WHEN 'archived' THEN 5
+        ELSE 99
+      END,
+      t.created_at DESC`;
+
+  const rows = await c.env.DB.prepare(sql)
+    .bind(isGlobalAdmin ? 1 : 0, isGlobalAdmin ? 1 : 0, userId, isGlobalAdmin ? 1 : 0)
+    .all();
+
+  const tournaments =
+    (rows.results ?? []).map((row: any) => ({
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      description: row.description,
+      status: row.status,
+      starts_at: row.starts_at,
+      ends_at: row.ends_at,
+      created_at: row.created_at,
+      capabilities: {
+        can_edit: row.can_edit === 1,
+        can_delete: row.can_delete === 1,
+      },
+    }));
+
+  return c.json({ tournaments });
 });
 
 tournaments.get('/:slug', optionalUser, withTournamentBySlug, withTournamentAccess, async (c) => {

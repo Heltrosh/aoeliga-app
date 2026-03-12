@@ -1,5 +1,7 @@
 import type { Context, MiddlewareHandler } from "hono";
-import type { AppBindings, TournamentRole, TournamentRow } from "../types";
+import type { AppBindings } from "../types/app";
+import type { TournamentRole } from "../domain/statuses";
+import type { TournamentRow } from "../domain/tournament";
 import { httpError } from "./http";
 
 export const withTournamentBySlug: MiddlewareHandler<AppBindings> = async (c, next) => {

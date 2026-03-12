@@ -1,5 +1,6 @@
 import type { Context, MiddlewareHandler } from 'hono';
-import type { AppBindings, AuthUser } from '../types';
+import type { AuthUser } from '../domain/auth';
+import type { AppBindings } from '../types/app';
 import { httpError } from './http';
 
 export type PermissionAction =

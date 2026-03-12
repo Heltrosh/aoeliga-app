@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import { tournamentKeys } from "../api/queryKeys";
-import { getTournament } from "../api/tournaments";
+import { getTournamentBySlug } from "../api/tournaments";
 import type { Tournament, TournamentCapabilities, TournamentViewer } from "./tournament-types";
 
 type TournamentContextValue = {
@@ -21,7 +21,7 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
 
   const query = useQuery({
     queryKey: slug ? tournamentKeys.context(slug) : ["tournaments", "missing-slug", "context"],
-    queryFn: () => getTournament(slug!),
+    queryFn: () => getTournamentBySlug(slug!),
     enabled: !!slug,
   });
 

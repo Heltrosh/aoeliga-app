@@ -1,6 +1,7 @@
 import type { Context, MiddlewareHandler } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
-import { AuthUser, AppBindings } from "../types";
+import type { AuthUser } from '../domain/auth';
+import type { AppBindings } from '../types/app';
 import { httpError } from "./http";
 
 export const SESSION_COOKIE = "aoeliga_session";

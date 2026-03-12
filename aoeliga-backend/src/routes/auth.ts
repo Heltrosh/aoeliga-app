@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { AppBindings } from "../types";
+import type { AppBindings } from "../types/app";
 import { ok, httpError } from "../lib/http";
 import { setSessionCookie, clearSessionCookie, getSessionId } from "../lib/auth_session";
 

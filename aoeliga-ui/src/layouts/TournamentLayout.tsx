@@ -1,7 +1,13 @@
+import { useEffect, useMemo } from "react";
 import { Box, NavLink } from "@mantine/core";
-import { IconLayoutDashboard, IconStack2, IconCalendarEvent, IconUsers, IconSettings } from "@tabler/icons-react";
+import {
+  IconLayoutDashboard,
+  IconStack2,
+  IconCalendarEvent,
+  IconUsers,
+  IconSettings,
+} from "@tabler/icons-react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import { useEffect } from "react";
 
 import { TournamentProvider } from "../tournament/TournamentContext";
 import { useTournament } from "../hooks/useTournament";
@@ -9,33 +15,70 @@ import { useTournamentAccess } from "../hooks/useTournamentAccess";
 import { useTournamentHeader } from "../hooks/useTournamentHeader";
 import { useI18n } from "../i18n/I18nProvider";
 
+type TournamentNavItem = {
+  label: string;
+  to: string;
+  icon: React.ReactNode;
+};
+
+function useTournamentNavItems(base: string) {
+  const { t } = useI18n();
+  const access = useTournamentAccess();
+
+  return useMemo<TournamentNavItem[]>(() => {
+    const items: TournamentNavItem[] = [
+      {
+        label: t("nav.dashboard"),
+        to: `${base}/dashboard`,
+        icon: <IconLayoutDashboard size={18} />,
+      },
+      {
+        label: t("nav.divisions"),
+        to: `${base}/divisions`,
+        icon: <IconStack2 size={18} />,
+      },
+      {
+        label: t("nav.schedule"),
+        to: `${base}/schedule`,
+        icon: <IconCalendarEvent size={18} />,
+      },
+      {
+        label: t("nav.players"),
+        to: `${base}/players`,
+        icon: <IconUsers size={18} />,
+      },
+    ];
+
+    if (access.canManageTournament || access.isTournamentModerator) {
+      items.push({
+        label: t("nav.administration"),
+        to: `${base}/admin`,
+        icon: <IconSettings size={18} />,
+      });
+    }
+
+    return items;
+  }, [access.canManageTournament, access.isTournamentModerator, base, t]);
+}
+
+function isNavItemActive(pathname: string, itemTo: string) {
+  return pathname === itemTo || pathname.startsWith(`${itemTo}/`);
+}
+
 function TournamentChrome() {
   const nav = useNavigate();
   const loc = useLocation();
   const { slug } = useParams();
   const { tournament } = useTournament();
   const { setTitle } = useTournamentHeader();
-  const { t } = useI18n();
-  const access = useTournamentAccess();
-  
-  
 
   useEffect(() => {
     setTitle(tournament?.name ?? null);
     return () => setTitle(null);
-  }, [tournament?.name, setTitle]);
+  }, [setTitle, tournament?.name]);
 
   const base = slug ? `/t/${slug}` : "";
-
-  const navItems = [
-    { label: t("nav.dashboard"), to: `${base}/dashboard`, icon: <IconLayoutDashboard size={18} /> },
-    { label: t("nav.divisions"), to: `${base}/divisions`, icon: <IconStack2 size={18} /> },
-    { label: t("nav.schedule"), to: `${base}/schedule`, icon: <IconCalendarEvent size={18} /> },
-    { label: t("nav.players"), to: `${base}/players`, icon: <IconUsers size={18} /> },
-    ...(access.canManageTournament || access.isTournamentModerator
-    ? [{ label: t("nav.administration"), to: `${base}/admin`, icon: <IconSettings size={18} /> }]
-    : []),
-  ];
+  const navItems = useTournamentNavItems(base);
 
   return (
     <Box
@@ -54,16 +97,16 @@ function TournamentChrome() {
           boxShadow: "inset -1px 0 0 rgba(229,154,42,0.10)",
         }}
       >
-        {navItems.map((it) => {
-          const active = loc.pathname === it.to;
+        {navItems.map((item) => {
+          const active = isNavItemActive(loc.pathname, item.to);
 
           return (
             <NavLink
-              key={it.to}
-              label={it.label}
-              leftSection={it.icon}
+              key={item.to}
+              label={item.label}
+              leftSection={item.icon}
               active={active}
-              onClick={() => nav(it.to)}
+              onClick={() => nav(item.to)}
               variant="subtle"
               color="gold"
               mb={3}
@@ -86,7 +129,9 @@ function TournamentChrome() {
                   fontSize: "0.95rem",
                 },
                 section: {
-                  color: active ? "rgba(255,191,84,0.95)" : "rgba(221,226,234,0.82)",
+                  color: active
+                    ? "rgba(255,191,84,0.95)"
+                    : "rgba(221,226,234,0.82)",
                 },
               }}
               onMouseEnter={(e) => {
