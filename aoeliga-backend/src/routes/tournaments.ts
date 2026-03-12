@@ -20,15 +20,27 @@ tournaments.get('/:slug', optionalUser, withTournamentBySlug, withTournamentAcce
   const isTournamentStreamer = c.get("isTournamentStreamer");
   const isTournamentPlayer = c.get("isTournamentPlayer");
 
-  return c.json({
-    tournament,
-    viewer: {
+  const capabilities = {
+    can_manage_tournament: await can(c, 'tournament.update'),
+    can_manage_players: await can(c, 'player.manage'),
+    can_assign_admins: await can(c, 'admin.assign'),
+    can_assign_streamers: await can(c, 'streamer.assign'),
+    can_manage_matches: await can(c, 'match.manage'),
+    can_access_streamer_tools: await can(c, 'streamer.manage'),
+  };
+
+  const viewer = {
       is_authenticated: !!user,
       is_global_admin: user?.is_admin === 1,
       tournament_role: tournamentRole,
       is_tournament_streamer: isTournamentStreamer,
       is_tournament_player: isTournamentPlayer,
-    },
+  };
+
+  return c.json({
+    tournament,
+    viewer,
+    capabilities
   });
 });
 
@@ -169,7 +181,7 @@ tournaments.get('/:slug/streamers', optionalUser, withTournamentBySlug, async (c
   
   const rows = await c.env.DB.prepare(
     `SELECT ts.user_id, ts.stream_url,
-            u.discord_id, u.discord_name, u.display_name as user_display_name, u.avatar
+            u.discord_id, u.discord_name, u.display_name, u.avatar
      FROM tournament_streamers ts
      JOIN users u ON u.id = ts.user_id
      WHERE ts.tournament_id = ?

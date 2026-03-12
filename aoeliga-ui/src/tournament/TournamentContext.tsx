@@ -2,12 +2,14 @@ import { createContext } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
+import { tournamentKeys } from "../api/queryKeys";
 import { getTournament } from "../api/tournaments";
-import type { Tournament, TournamentViewer } from "./tournament-types";
+import type { Tournament, TournamentCapabilities, TournamentViewer } from "./tournament-types";
 
 type TournamentContextValue = {
   tournament: Tournament | null;
   viewer: TournamentViewer | null;
+  capabilities: TournamentCapabilities | null;
   loading: boolean;
   error: boolean;
 };
@@ -18,7 +20,7 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
   const { slug } = useParams();
 
   const query = useQuery({
-    queryKey: ["tournament", slug],
+    queryKey: slug ? tournamentKeys.context(slug) : ["tournaments", "missing-slug", "context"],
     queryFn: () => getTournament(slug!),
     enabled: !!slug,
   });
@@ -28,6 +30,7 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
       value={{
         tournament: query.data?.tournament ?? null,
         viewer: query.data?.viewer ?? null,
+        capabilities: query.data?.capabilities ?? null,
         loading: query.isLoading,
         error: query.isError,
       }}

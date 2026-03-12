@@ -1,16 +1,9 @@
 import { api } from "./client";
+import { usersListResponseSchema, type UserListItem, type UsersListResponse } from "./schemas/users";
 
-export type UserListItem = {
-  id: number;
-  discord_name: string | null;
-  display_name: string | null;
-  avatar: string | null;
-};
+export type { UserListItem, UsersListResponse };
 
-export type UsersListResponse = {
-  users: UserListItem[];
-};
-
-export function listUsers(): Promise<UsersListResponse> {
-  return api.get("/api/users");
+export async function listUsers(): Promise<UsersListResponse> {
+  const json = await api.get("/api/users");
+  return usersListResponseSchema.parse(json);
 }

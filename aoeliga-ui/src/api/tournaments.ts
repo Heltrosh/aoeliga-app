@@ -1,12 +1,22 @@
 import { api } from "./client";
-import type { TournamentDetailResponse } from "../tournament/tournament-types";
+import {
+  tournamentAdminsResponseSchema,
+  tournamentDetailResponseSchema,
+  tournamentPlayersResponseSchema,
+  tournamentStreamersResponseSchema,
+  type TournamentAdminRow,
+  type TournamentDetailResponse,
+  type TournamentPlayerRow,
+  type TournamentStreamerRow,
+} from "./schemas/tournaments";
 
 export function listTournaments() {
   return api.get("/api/tournaments");
 }
 
-export function getTournament(slug: string): Promise<TournamentDetailResponse> {
-  return api.get(`/api/tournaments/${slug}`);
+export async function getTournament(slug: string): Promise<TournamentDetailResponse> {
+  const json = await api.get(`/api/tournaments/${slug}`);
+  return tournamentDetailResponseSchema.parse(json);
 }
 
 export function createTournament(body: {
@@ -19,33 +29,11 @@ export function createTournament(body: {
   return api.post("/api/admin/tournaments", body);
 }
 
-export type TournamentAdminRow = {
-  user_id: number;
-  role: "admin" | "moderator";
-  discord_name: string | null;
-  display_name: string | null;
-  avatar: string | null;
-};
+export type { TournamentAdminRow, TournamentStreamerRow, TournamentPlayerRow };
 
-export type TournamentStreamerRow = {
-  user_id: number;
-  discord_name: string | null;
-  display_name: string | null;
-  avatar: string | null;
-};
-
-export type TournamentPlayerRow = {
-  id: number;
-  user_id: number;
-  aoe_id: string;
-  status: string;
-  discord_name: string | null;
-  display_name: string | null;
-  avatar: string | null;
-};
-
-export function getTournamentAdmins(slug: string): Promise<{ admins: TournamentAdminRow[] }> {
-  return api.get(`/api/tournaments/${slug}/admins`);
+export async function getTournamentAdmins(slug: string): Promise<{ admins: TournamentAdminRow[] }> {
+  const json = await api.get(`/api/tournaments/${slug}/admins`);
+  return tournamentAdminsResponseSchema.parse(json);
 }
 
 export function addTournamentAdmin(
@@ -59,10 +47,11 @@ export function removeTournamentAdmin(slug: string, userId: number) {
   return api.del(`/api/tournaments/${slug}/admins/${userId}`);
 }
 
-export function getTournamentStreamers(
+export async function getTournamentStreamers(
   slug: string
 ): Promise<{ streamers: TournamentStreamerRow[] }> {
-  return api.get(`/api/tournaments/${slug}/streamers`);
+  const json = await api.get(`/api/tournaments/${slug}/streamers`);
+  return tournamentStreamersResponseSchema.parse(json);
 }
 
 export function addTournamentStreamer(slug: string, body: { user_id: number }) {
@@ -73,10 +62,11 @@ export function removeTournamentStreamer(slug: string, userId: number) {
   return api.del(`/api/tournaments/${slug}/streamers/${userId}`);
 }
 
-export function getTournamentPlayers(
+export async function getTournamentPlayers(
   slug: string
 ): Promise<{ players: TournamentPlayerRow[] }> {
-  return api.get(`/api/tournaments/${slug}/players`);
+  const json = await api.get(`/api/tournaments/${slug}/players`);
+  return tournamentPlayersResponseSchema.parse(json);
 }
 
 export function addTournamentPlayer(
