@@ -1,8 +1,9 @@
 import { api, API_BASE } from "./client";
-import type { MeResponse } from "../auth/auth-types";
+import { meResponseSchema, type MeResponse } from "./schemas/auth";
 
-export function fetchMe(): Promise<MeResponse> {
-  return api.get("/api/me");
+export async function fetchMe(): Promise<MeResponse> {
+  const json = await api.get("/api/me");
+  return meResponseSchema.parse(json);
 }
 
 export function login(redirect = "/") {

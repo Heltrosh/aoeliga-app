@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS matches (
   player1_points INTEGER NOT NULL DEFAULT 0,
   player2_points INTEGER NOT NULL DEFAULT 0,
   scheduled_for  TEXT,
-  state          TEXT NOT NULL DEFAULT 'created', -- created|scheduled|played|forfeited
+  status         TEXT NOT NULL DEFAULT 'created', -- created|scheduled|played|forfeited
   played_on      TEXT,
 
   FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
