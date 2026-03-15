@@ -27,6 +27,7 @@ export const tournamentSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   status: tournamentStatusSchema,
+  default_ruleset: z.number().nullable(),
   starts_at: z.string().nullable(),
   ends_at: z.string().nullable(),
   created_at: z.string().optional(),
@@ -43,6 +44,7 @@ export const tournamentListItemSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   status: tournamentStatusSchema,
+  default_ruleset: z.number().nullable(),
   starts_at: z.string().nullable(),
   ends_at: z.string().nullable(),
   capabilities: tournamentListCapabilitiesSchema,
@@ -56,6 +58,7 @@ export const createTournamentInputSchema = z.object({
   slug: z.string().min(1, "Slug is required"),
   name: z.string().min(1, "Name is required"),
   description: z.string().nullable(),
+  default_ruleset: z.number().nullable().optional(),
   starts_at: z.string().nullable(),
   ends_at: z.string().nullable(),
 });
@@ -64,6 +67,7 @@ export const updateTournamentInputSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().nullable(),
   status: tournamentStatusSchema,
+  default_ruleset: z.number().nullable().optional(),
   starts_at: z.string().nullable(),
   ends_at: z.string().nullable(),
 });

@@ -31,7 +31,7 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
         tournament: query.data?.tournament ?? null,
         viewer: query.data?.viewer ?? null,
         capabilities: query.data?.capabilities ?? null,
-        loading: query.isLoading,
+        loading: query.isPending,
         error: query.isError,
       }}
     >

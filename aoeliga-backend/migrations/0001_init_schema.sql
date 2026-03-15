@@ -16,14 +16,17 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS tournaments (
-  id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  slug          TEXT NOT NULL UNIQUE,
-  name          TEXT NOT NULL,
-  description   TEXT,
-  status        TEXT NOT NULL DEFAULT 'draft', -- draft|signup|active|completed|archived
-  starts_at     TEXT,
-  ends_at       TEXT,
-  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug            TEXT NOT NULL UNIQUE,
+  name            TEXT NOT NULL,
+  description     TEXT,
+  status          TEXT NOT NULL DEFAULT 'draft', -- draft|signup|active|completed|archived
+  default_ruleset INTEGER,
+  starts_at       TEXT,
+  ends_at         TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+
+  FOREIGN KEY (default_ruleset) REFERENCES rulesets(id) ON DELETE SET NULL,
 
   CHECK (status IN ('draft', 'signup', 'active', 'completed', 'archived'))
 );

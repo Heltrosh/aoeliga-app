@@ -2,12 +2,10 @@ import { useMemo, useState } from "react";
 import {
   Accordion,
   ActionIcon,
-  Container,
-  Group,
   Loader,
   SimpleGrid,
   Text,
-  Title,
+  Tooltip,
 } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +17,8 @@ import type { TournamentListItem } from "../../api/schemas/tournaments";
 import { CreateTournamentModal } from "./CreateTournamentModal";
 import { EditTournamentModal } from "./EditTournamentModal";
 import { TournamentCard } from "./TournamentCard";
+import { LandingShell } from "./LandingShell";
+import { getLandingNavigationAccess } from "./landingAccess";
 
 export default function LandingPage() {
   const nav = useNavigate();
@@ -30,8 +30,9 @@ export default function LandingPage() {
   const [editingTournament, setEditingTournament] =
     useState<TournamentListItem | null>(null);
 
-  const isGlobalAdmin = user?.is_admin === 1;
   const tournaments = tournamentsQuery.data?.tournaments ?? [];
+  const { isGlobalAdmin, canSeeRulesets, canSeeAdmin } =
+    getLandingNavigationAccess(user, tournaments);
 
   const activeTournaments = useMemo(
     () => tournaments.filter((tournament) => tournament.status !== "archived"),
@@ -63,26 +64,26 @@ export default function LandingPage() {
   }
 
   return (
-    <Container size="lg" py="xl">
-      <Group justify="space-between" align="end" mb="lg">
-        <div>
-          <Title order={1}>{t("landing.title")}</Title>
-        </div>
-
-        {isGlobalAdmin && (
-          <ActionIcon
-            size="lg"
-            radius="xl"
-            variant="filled"
-            color="gold"
-            onClick={() => setCreateOpen(true)}
-            aria-label={t("landing.createTournament.openAriaLabel")}
-          >
-            <IconPlus size={18} />
-          </ActionIcon>
-        )}
-      </Group>
-
+    <LandingShell
+      section="tournaments"
+      canSeeRulesets={canSeeRulesets}
+      canSeeAdmin={canSeeAdmin}
+      rightSlot={
+        isGlobalAdmin ? (
+          <Tooltip label={t("landing.createTournament.openAriaLabel")} position="bottom">
+            <ActionIcon
+              size="lg"
+              radius="xl"
+              variant="filled"
+              color="gold"
+              onClick={() => setCreateOpen(true)}
+            >
+              <IconPlus size={18} />
+            </ActionIcon>
+          </Tooltip>
+        ) : null
+      }
+    >
       {tournamentsQuery.isLoading ? (
         <Loader />
       ) : tournamentsQuery.isError ? (
@@ -143,6 +144,6 @@ export default function LandingPage() {
         opened={editingTournament !== null}
         onClose={() => setEditingTournament(null)}
       />
-    </Container>
+    </LandingShell>
   );
 }

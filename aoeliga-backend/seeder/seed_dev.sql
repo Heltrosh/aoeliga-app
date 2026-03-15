@@ -53,22 +53,6 @@ VALUES
   (13, '100000000000000013', 'rejected1',  'Rejected One',  NULL, 0, 0, '2026-03-10 18:42:00');
 
 -- ============================================================
--- TOURNAMENT
--- ============================================================
-INSERT INTO tournaments (id, slug, name, description, status, starts_at, ends_at, created_at)
-VALUES
-  (
-    1,
-    'spring-2026',
-    'Spring 2026',
-    'Dev seed tournament for UI/API testing',
-    'active',
-    '2026-03-01',
-    '2026-06-01',
-    '2026-02-10 12:00:00'
-  );
-
--- ============================================================
 -- RULESET
 -- ============================================================
 INSERT INTO rulesets (id, name, config_json, created_by_user_id, created_at)
@@ -76,9 +60,114 @@ VALUES
   (
     1,
     'Default League Rules',
-    '{"stages":[{"name":"group","format":"round_robin","match_format":"bo3"},{"name":"playoffs","format":"single_elimination","match_format":"bo5"}]}',
+    json('{
+    "version": 1,
+    "calendar": {
+      "round_duration_days": 7
+    },
+    "match_formats": {
+      "bo3": {
+        "type": "best_of",
+        "games": 3
+      },
+      "bo5": {
+        "type": "best_of",
+        "games": 5
+      },
+      "bo7": {
+        "type": "best_of",
+        "games": 7
+      }
+    },
+    "scoring_systems": {
+      "league_points": {
+        "type": "match_points",
+        "win": 3,
+        "loss": 0,
+        "draw": 0
+      }
+    },
+    "stages": [
+      {
+        "id": "group_stage",
+        "name": "Group Stage",
+        "type": "round_robin",
+        "round_robin": {
+          "legs": 1
+        },
+        "participants": {
+          "source": "division_players"
+        },
+        "cadence": {
+          "round_duration_days": 7
+        },
+        "match_format_policy": {
+          "default_format": "bo3"
+        },
+        "scoring": {
+          "system": "league_points"
+        },
+        "advancement": {
+          "type": "top_n",
+          "count": 4
+        },
+        "tiebreakers": [
+          "match_points",
+          "head_to_head",
+          "game_difference",
+          "games_won"
+        ]
+      },
+      {
+        "id": "playoffs",
+        "name": "Playoffs",
+        "type": "single_elimination",
+        "participants": {
+          "source": "previous_stage",
+          "stage_id": "group_stage",
+          "selector": {
+            "type": "top_n",
+            "count": 4
+          }
+        },
+        "seeding": {
+          "type": "previous_stage_rank"
+        },
+        "cadence": {
+          "round_duration_days": 7
+        },
+        "match_format_policy": {
+          "default_format": "bo5",
+          "overrides": [
+            {
+              "round": "final",
+              "format": "bo7"
+            }
+          ]
+        }
+      }
+    ]
+  }'),    
+  1,
+  '2026-02-12 10:00:00'
+  );
+
+
+-- ============================================================
+-- TOURNAMENT
+-- ============================================================
+INSERT INTO tournaments (id, slug, name, description, status, default_ruleset, starts_at, ends_at, created_at)
+VALUES
+  (
     1,
-    '2026-02-12 10:00:00'
+    'spring-2026',
+    'Spring 2026',
+    'Dev seed tournament for UI/API testing',
+    'active',
+    1,
+    '2026-03-01',
+    '2026-06-01',
+    '2026-02-10 12:00:00'
   );
 
 -- ============================================================

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { AppBindings } from '../types';
+import type { AppBindings } from '../types/app';
 import { optionalUser } from '../lib/auth_session';
 
 const me = new Hono<AppBindings>();

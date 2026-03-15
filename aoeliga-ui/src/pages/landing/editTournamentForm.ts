@@ -6,6 +6,7 @@ export const editTournamentFormSchema = updateTournamentInputSchema.extend({
   description: z.string().optional().or(z.literal("")),
   starts_at: z.string().nullable(),
   ends_at: z.string().nullable(),
+  default_ruleset: z.string(),
 });
 
 export type EditTournamentFormValues = z.infer<typeof editTournamentFormSchema>;

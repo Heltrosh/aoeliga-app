@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { AppBindings } from '../types';
+import type { AppBindings } from '../types/app';
 import { requireUser } from '../lib/auth_session';
 import { requirePermission } from '../lib/permissions';
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { Box, NavLink } from "@mantine/core";
+import { Box, Center, Loader, NavLink, Stack, Text } from "@mantine/core";
 import {
   IconLayoutDashboard,
   IconStack2,
@@ -65,11 +65,33 @@ function isNavItemActive(pathname: string, itemTo: string) {
   return pathname === itemTo || pathname.startsWith(`${itemTo}/`);
 }
 
+
+function TournamentPageLoading() {
+  return (
+    <Center style={{ minHeight: "calc(100vh - 60px)" }}>
+      <Stack align="center" gap="sm">
+        <Loader color="yellow" />
+        <Text c="dimmed" size="sm">
+          Loading tournament...
+        </Text>
+      </Stack>
+    </Center>
+  );
+}
+
+function TournamentPageError() {
+  return (
+    <Center style={{ minHeight: "calc(100vh - 60px)" }}>
+      <Text c="red">Failed to load tournament.</Text>
+    </Center>
+  );
+}
+
 function TournamentChrome() {
   const nav = useNavigate();
   const loc = useLocation();
   const { slug } = useParams();
-  const { tournament } = useTournament();
+  const { tournament, loading, error } = useTournament();
   const { setTitle } = useTournamentHeader();
 
   useEffect(() => {
@@ -79,6 +101,14 @@ function TournamentChrome() {
 
   const base = slug ? `/t/${slug}` : "";
   const navItems = useTournamentNavItems(base);
+
+  if (loading) {
+    return <TournamentPageLoading />;
+  }
+
+  if (error || !tournament) {
+    return <TournamentPageError />;
+  }
 
   return (
     <Box

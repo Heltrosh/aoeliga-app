@@ -4,6 +4,8 @@ import RootLayout from "../layouts/RootLayout";
 import TournamentLayout from "../layouts/TournamentLayout";
 
 import LandingPage from "../pages/landing/LandingPage";
+import RulesetsPage from "../pages/landing/RulesetsPage";
+import GlobalAdminPage from "../pages/landing/GlobalAdminPage";
 import DashboardPage from "../pages/tournament/DashboardPage";
 import DivisionsPage from "../pages/tournament/DivisionsPage";
 import SchedulePage from "../pages/tournament/SchedulePage";
@@ -15,6 +17,8 @@ export const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       { path: "/", element: <LandingPage /> },
+      { path: "/rulesets", element: <RulesetsPage /> },
+      { path: "/admin", element: <GlobalAdminPage /> },
       {
         path: "/t/:slug",
         element: <TournamentLayout />,

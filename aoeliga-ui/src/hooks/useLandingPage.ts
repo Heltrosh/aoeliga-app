@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { createTournament, listTournaments, updateTournament, deleteTournament } from "../api/tournaments";
-import { tournamentKeys } from "../api/queryKeys";
+import { tournamentKeys, rulesetKeys } from "../api/queryKeys";
+import { fetchRulesets } from "../api/rulesets";
 import type { CreateTournamentInput, UpdateTournamentInput } from "../api/schemas/tournaments";
 
 export function useLandingPage() {
@@ -39,10 +40,16 @@ export function useLandingPage() {
     },
   });
 
+  const rulesetsQuery = useQuery({
+  queryKey: rulesetKeys.list(),
+  queryFn: fetchRulesets,
+});
+
   return {
     tournamentsQuery,
     createTournamentMutation,
     updateTournamentMutation,
-    deleteTournamentMutation
+    deleteTournamentMutation,
+    rulesetsQuery
   };
 }

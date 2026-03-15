@@ -4,6 +4,8 @@ import { requireUser, optionalUser } from '../lib/auth_session';
 import { httpError } from '../lib/http';
 import { requirePermission, can } from '../lib/permissions';
 import { withTournamentAccess, withTournamentBySlug } from '../lib/tournament';
+import { getDivisionRulesetDto, getDivisionStandingsDto, getMatchFormatPreviewDto, getStagePreviewDto } from '../services/rulesets';
+
 
 const tournaments = new Hono<AppBindings>();
 
@@ -14,7 +16,7 @@ tournaments.get("/", optionalUser, async (c) => {
   const userId = user?.id ?? null;
 
   const sql = `
-    SELECT t.id, t.slug, t.name, t.description, t.status, t.starts_at, t.ends_at, t.created_at,
+    SELECT t.id, t.slug, t.name, t.description, t.status, t.default_ruleset, t.starts_at, t.ends_at, t.created_at,
       CASE
         WHEN ? = 1 THEN 1
         WHEN ta.role = 'admin' THEN 1
@@ -58,6 +60,7 @@ tournaments.get("/", optionalUser, async (c) => {
       name: row.name,
       description: row.description,
       status: row.status,
+      default_ruleset: row.default_ruleset,
       starts_at: row.starts_at,
       ends_at: row.ends_at,
       created_at: row.created_at,
@@ -103,13 +106,13 @@ tournaments.get('/:slug', optionalUser, withTournamentBySlug, withTournamentAcce
 
 tournaments.put('/:slug', requireUser, withTournamentBySlug, withTournamentAccess, withTournamentAccess, requirePermission('tournament.update'), async (c) => {
   const slug = c.req.param('slug');
-  const body = await c.req.json<{ name?: string; description?: string | null; status?: string; starts_at?: string | null; ends_at?: string | null }>();
+  const body = await c.req.json<{ name?: string; description?: string | null; default_ruleset: number | null; status?: string; starts_at?: string | null; ends_at?: string | null }>();
   
   await c.env.DB.prepare(
     `UPDATE tournaments
-     SET name = coalesce(?, name), description = ?, status = coalesce(?, status), starts_at = ?, ends_at = ?
+     SET name = coalesce(?, name), description = ?, status = coalesce(?, status), default_ruleset = ?, starts_at = ?, ends_at = ?
      WHERE slug = ?`
-  ).bind(body.name ?? null, body.description ?? null, body.status ?? null, body.starts_at ?? null, body.ends_at ?? null, slug).run();
+  ).bind(body.name ?? null, body.description ?? null, body.status ?? null, body.default_ruleset ?? null, body.starts_at ?? null, body.ends_at ?? null, slug).run();
   
   return c.json({ ok: true });
 });
@@ -172,6 +175,86 @@ tournaments.delete('/:slug/divisions/:divisionId', requireUser, withTournamentBy
     httpError(404, "Division not found");
   
   return c.json({ ok: true });
+});
+
+tournaments.get('/:slug/divisions/:divisionId/ruleset', optionalUser, withTournamentBySlug, async (c) => {
+  const t = c.get('tournament')!;
+  const divisionId = Number(c.req.param('divisionId'));
+  if (!Number.isInteger(divisionId) || divisionId <= 0)
+    httpError(400, 'Invalid division id');
+
+  return c.json({
+    division_ruleset: await getDivisionRulesetDto(c.env, {
+      tournamentId: t.id,
+      divisionId,
+    }),
+  });
+});
+
+tournaments.get('/:slug/divisions/:divisionId/standings', optionalUser, withTournamentBySlug, async (c) => {
+  const t = c.get('tournament')!;
+  const divisionId = Number(c.req.param('divisionId'));
+  if (!Number.isInteger(divisionId) || divisionId <= 0)
+    httpError(400, 'Invalid division id');
+
+  const stageId = c.req.query('stageId') ?? null;
+
+  return c.json({
+    standings_view: await getDivisionStandingsDto(c.env, {
+      tournamentId: t.id,
+      divisionId,
+      stageId,
+    }),
+  });
+});
+
+tournaments.get('/:slug/divisions/:divisionId/stages/:stageId/preview', optionalUser, withTournamentBySlug, async (c) => {
+  const t = c.get('tournament')!;
+  const divisionId = Number(c.req.param('divisionId'));
+  if (!Number.isInteger(divisionId) || divisionId <= 0)
+    httpError(400, 'Invalid division id');
+
+  return c.json({
+    stage_preview: await getStagePreviewDto(c.env, {
+      tournamentId: t.id,
+      divisionId,
+      stageId: c.req.param('stageId'),
+    }),
+  });
+});
+
+tournaments.get('/:slug/divisions/:divisionId/match-format-preview', optionalUser, withTournamentBySlug, async (c) => {
+  const t = c.get('tournament')!;
+  const divisionId = Number(c.req.param('divisionId'));
+  if (!Number.isInteger(divisionId) || divisionId <= 0)
+    httpError(400, 'Invalid division id');
+
+  const stageId = c.req.query('stageId');
+  if (!stageId)
+    httpError(400, 'stageId is required');
+
+  const roundNumberRaw = c.req.query('roundNumber');
+  let roundNumber: number | null = null;
+
+  if (roundNumberRaw) {
+    roundNumber = Number(roundNumberRaw);
+
+    if (!Number.isInteger(roundNumber) || roundNumber <= 0) {
+      httpError(400, 'roundNumber must be a positive integer');
+    }
+  }
+
+  const roundLabel = c.req.query('roundLabel') ?? null;
+
+  return c.json({
+    match_format_preview: await getMatchFormatPreviewDto(c.env, {
+      tournamentId: t.id,
+      divisionId,
+      stageId,
+      roundNumber,
+      roundLabel,
+    }),
+  });
 });
 
 // admins

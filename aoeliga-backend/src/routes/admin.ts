@@ -71,7 +71,7 @@ admin.patch('/users/:id/ban', async (c) => {
 });
 
 admin.post('/tournaments', async (c) => {
-  const body = await c.req.json<{ slug?: string; name?: string; description?: string | null; starts_at?: string | null; ends_at?: string | null }>();
+  const body = await c.req.json<{ slug?: string; name?: string; description?: string | null; default_ruleset?: number | null; starts_at?: string | null; ends_at?: string | null }>();
 
   const slug = body.slug?.trim();
   const name = body.name?.trim();
@@ -83,9 +83,9 @@ admin.post('/tournaments', async (c) => {
     httpError(404, "Tournament slug already exists");
   
   const result = await c.env.DB.prepare(
-    `INSERT INTO tournaments (slug, name, description, status, starts_at, ends_at)
-     VALUES (?, ?, ?, 'draft', ?, ?)`
-  ).bind(slug, name, body.description ?? null, body.starts_at ?? null, body.ends_at ?? null).run();
+    `INSERT INTO tournaments (slug, name, description, status, default_ruleset, starts_at, ends_at)
+     VALUES (?, ?, ?, 'draft', ?, ?, ?)`
+  ).bind(slug, name, body.description ?? null, body.default_ruleset ?? null, body.starts_at ?? null, body.ends_at ?? null).run();
   
   return c.json({ ok: true, id: result.meta.last_row_id }, 201);
 });

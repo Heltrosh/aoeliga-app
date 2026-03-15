@@ -11,3 +11,9 @@ export const userKeys = {
   all: ["users"] as const,
   list: () => ["users", "list"] as const,
 };
+
+export const rulesetKeys = {
+  all: ["rulesets"] as const,
+  list: () => ["rulesets", "list"] as const,
+  detail: (id: number | null) => ["rulesets", "detail", id] as const,
+};

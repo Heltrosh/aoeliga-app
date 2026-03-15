@@ -8,3 +8,5 @@ export type Env = {
   DISCORD_REDIRECT_URI: string;
   APP_ORIGIN: string;
 };
+
+export type Db = Env["DB"];

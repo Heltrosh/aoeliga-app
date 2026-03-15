@@ -1,103 +1,94 @@
 import { Hono } from 'hono';
-import type { AppBindings } from '../types';
+import type { AppBindings } from '../types/app';
 import { requireUser } from '../lib/auth_session';
 import { httpError } from '../lib/http';
 import { requirePermission } from '../lib/permissions';
-import { config } from 'node:process';
+import {
+  createRulesetDto,
+  deleteRulesetDto,
+  getRulesetCatalogDto,
+  getRulesetDto,
+  listRulesetDtos,
+  updateRulesetDto,
+  validateRulesetDto,
+} from '../services/rulesets';
 
 const rulesets = new Hono<AppBindings>();
 
 rulesets.use('*', requireUser);
 
+rulesets.get('/catalog', async (c) => {
+  return c.json({ catalog: getRulesetCatalogDto() });
+});
+
+rulesets.post('/validate', async (c) => {
+  const body = await c.req.json<{ config?: unknown }>();
+  return c.json(await validateRulesetDto(body.config));
+});
+
 rulesets.get('/', async (c) => {
-  const rows = await c.env.DB.prepare(
-    `SELECT r.id, r.name, r.config_json, r.created_at, r.created_by_user_id,
-            u.display_name, u.discord_name
-     FROM rulesets r
-     JOIN users u ON u.id = r.created_by_user_id
-     ORDER BY r.id DESC`
-  ).all();
-  
-  return c.json({ rulesets: rows.results ?? [] });
+  return c.json({ rulesets: await listRulesetDtos(c.env) });
 });
 
 rulesets.get('/:id', async (c) => {
-  const id = Number(c.req.param('id'));  
-  if (!Number.isInteger(id) || id <= 0)
-    httpError(400, "Invalid ruleset id");
-  
-  const row = await c.env.DB.prepare(
-    `SELECT r.id, r.name, r.config_json, r.created_at, r.created_by_user_id,
-            u.display_name, u.discord_name
-    FROM rulesets r
-    JOIN users u ON u.id = r.created_by_user_id
-    WHERE r.id = ? 
-    LIMIT 1`
-  ).bind(id).first();
-  
-  if (!row) 
-    httpError(404, 'Ruleset not found');
-  
-  return c.json({ ruleset: row });
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id <= 0) httpError(400, 'Invalid ruleset id');
+  return c.json({ ruleset: await getRulesetDto(c.env, id) });
 });
 
-rulesets.post('/', requirePermission("ruleset.create"), async (c) => {
+rulesets.post('/', requirePermission('ruleset.create'), async (c) => {
   const user = c.get('user');
-  const body = await c.req.json<{ name?: string; config_json?: string }>();
+  const body = await c.req.json<{ name?: string; config?: unknown }>();
   const name = body.name?.trim();
-  const configJson = body.config_json?.trim();
-  if (!name || !configJson)
-    httpError(400, "name and config_json are required");
+  if (!name) httpError(400, 'name is required');
 
-  const result = await c.env.DB.prepare(
-    `INSERT INTO rulesets (name, config_json, created_by_user_id) VALUES (?, ?, ?)`
-  ).bind(name, configJson, user!.id).run();
-  
-  return c.json({ ok: true, id: result.meta.last_row_id }, 201);
+  const ruleset = await createRulesetDto(c.env, {
+    name,
+    config: body.config,
+    createdByUserId: user!.id,
+  });
+
+  return c.json({ ok: true, ruleset }, 201);
 });
 
-rulesets.put('/:id', requirePermission('ruleset.update.own', async (c) => {
-    const id = Number(c.req.param('id'));  
-    if (!Number.isInteger(id) || id <= 0)
-        httpError(400, "Invalid ruleset id");
-    
-    const existing = await c.env.DB.prepare(`SELECT created_by_user_id FROM rulesets WHERE id = ? LIMIT 1`).bind(id).first<{ created_by_user_id: number }>();
-    if (!existing) 
-      httpError(404, 'Ruleset not found');
-    
+rulesets.put(
+  '/:id',
+  requirePermission('ruleset.update.own', async (c) => {
+    const id = Number(c.req.param('id'));
+    if (!Number.isInteger(id) || id <= 0) httpError(400, 'Invalid ruleset id');
+    const existing = await getRulesetDto(c.env, id);
     return { ownerUserId: existing.created_by_user_id };
   }),
   async (c) => {
     const id = Number(c.req.param('id'));
-    const body = await c.req.json<{ name?: string; config_json?: string }>();
+    const body = await c.req.json<{ name?: string; config?: unknown }>();
     const name = body.name?.trim();
-    const configJson = body.config_json?.trim();
-    if (!name || !configJson)
-      httpError(400, "name and config_json are required");
+    if (!name) httpError(400, 'name is required');
 
-    await c.env.DB.prepare(`UPDATE rulesets SET name = ?, config_json = ? WHERE id = ?`).bind(name, configJson, id).run();
-    
-    return c.json({ ok: true });
+    const ruleset = await updateRulesetDto(c.env, {
+      id,
+      name,
+      config: body.config,
+    });
+
+    return c.json({ ok: true, ruleset });
   }
 );
 
-rulesets.delete('/:id', requirePermission('ruleset.update.own', async (c) => {
-    const id = Number(c.req.param('id'));  
-    if (!Number.isInteger(id) || id <= 0)
-      httpError(400, "Invalid ruleset id");
-    
-    const row = await c.env.DB.prepare(`SELECT created_by_user_id FROM rulesets WHERE id = ?`).bind(id).first<{ created_by_user_id: number }>();
-    
-    return { ownerUserId: row?.created_by_user_id ?? -1 };
-  }), 
+rulesets.delete(
+  '/:id',
+  requirePermission('ruleset.update.own', async (c) => {
+    const id = Number(c.req.param('id'));
+    if (!Number.isInteger(id) || id <= 0) httpError(400, 'Invalid ruleset id');
+    const existing = await getRulesetDto(c.env, id);
+    return { ownerUserId: existing.created_by_user_id };
+  }),
   async (c) => {
     const id = Number(c.req.param('id'));
-    
-    const result = await c.env.DB.prepare(`DELETE FROM rulesets WHERE id = ?`).bind(id).run();
-    if ((result.meta.changes ?? 0) === 0)
-      httpError(404, "Ruleset not found");
-    
+    const result = await deleteRulesetDto(c.env, id);
+    if ((result.meta.changes ?? 0) === 0) httpError(404, 'Ruleset not found');
     return c.json({ ok: true });
-});
+  }
+);
 
 export default rulesets;
