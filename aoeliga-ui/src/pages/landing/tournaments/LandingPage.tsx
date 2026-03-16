@@ -10,15 +10,15 @@ import {
 import { IconPlus } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 
-import { useAuth } from "../../auth/AuthContext";
-import { useI18n } from "../../i18n/I18nProvider";
-import { useLandingPage } from "../../hooks/useLandingPage";
-import type { TournamentListItem } from "../../api/schemas/tournaments";
+import { useAuth } from "../../../auth/AuthContext";
+import { useI18n } from "../../../i18n/I18nProvider";
+import { useLandingPage } from "../../../hooks/useLandingPage";
+import type { TournamentListItem } from "../../../api/schemas/tournaments";
 import { CreateTournamentModal } from "./CreateTournamentModal";
 import { EditTournamentModal } from "./EditTournamentModal";
 import { TournamentCard } from "./TournamentCard";
-import { LandingShell } from "./LandingShell";
-import { getLandingNavigationAccess } from "./landingAccess";
+import { LandingShell } from "../LandingShell";
+import { getLandingNavigationAccess } from "../landingAccess";
 
 export default function LandingPage() {
   const nav = useNavigate();
@@ -70,7 +70,7 @@ export default function LandingPage() {
       canSeeAdmin={canSeeAdmin}
       rightSlot={
         isGlobalAdmin ? (
-          <Tooltip label={t("landing.createTournament.openAriaLabel")} position="bottom">
+          <Tooltip label={t("landing.createTournament.tooltip")} position="bottom">
             <ActionIcon
               size="lg"
               radius="xl"

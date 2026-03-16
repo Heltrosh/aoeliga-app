@@ -29,7 +29,7 @@ export const cs = {
 
   "landing.deleteTournament.confirm": "Opravdu chcete tento turnaj smazat?",
 
-  "landing.createTournament.openAriaLabel": "Vytvořit turnaj",
+  "landing.createTournament.tooltip": "Vytvořit turnaj",
   "landing.createTournament.title": "Vytvořit turnaj",
   "landing.createTournament.actions.create": "Vytvořit",
   "landing.createTournament.errors.submitFailed": "Nepodařilo se vytvořit turnaj",
@@ -64,6 +64,8 @@ export const cs = {
   "landing.editTournament.fields.startsAt.placeholder": "RRRR-MM-DD",
   "landing.editTournament.fields.endsAt.label": "Datum konce",
   "landing.editTournament.fields.endsAt.placeholder": "RRRR-MM-DD",
+
+  "landing.createRuleset.tooltip": "Vytvořit ruleset",
 
   "nav.dashboard": "Přehled",
   "nav.divisions": "Divize",

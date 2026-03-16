@@ -2,9 +2,9 @@ import { useState } from "react";
 import { ActionIcon, Badge, Card, Group, Text, Title, Box } from "@mantine/core";
 import { IconEdit, IconTrash } from "@tabler/icons-react";
 
-import { useI18n } from "../../i18n/I18nProvider";
-import type { TournamentListItem } from "../../api/schemas/tournaments";
-import { getTournamentStatusMeta } from "../../utils/tournamentStatus";
+import { useI18n } from "../../../i18n/I18nProvider";
+import type { TournamentListItem } from "../../../api/schemas/tournaments";
+import { getTournamentStatusMeta } from "../../../utils/tournamentStatus";
 
 type TournamentCardProps = {
   tournament: TournamentListItem;

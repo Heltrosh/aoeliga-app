@@ -3,8 +3,8 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import RootLayout from "../layouts/RootLayout";
 import TournamentLayout from "../layouts/TournamentLayout";
 
-import LandingPage from "../pages/landing/LandingPage";
-import RulesetsPage from "../pages/landing/RulesetsPage";
+import LandingPage from "../pages/landing/tournaments/LandingPage";
+import RulesetsPage from "../pages/landing/rulesets/RulesetsPage";
 import GlobalAdminPage from "../pages/landing/GlobalAdminPage";
 import DashboardPage from "../pages/tournament/DashboardPage";
 import DivisionsPage from "../pages/tournament/DivisionsPage";

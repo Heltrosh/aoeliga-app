@@ -14,17 +14,18 @@ import { DateInput } from "@mantine/dates";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { useI18n } from "../../i18n/I18nProvider";
-import { useLandingPage } from "../../hooks/useLandingPage";
-import { RulesetDetailsModal } from "../../components/rulesets/RulesetDetailsModal";
-import { buildRulesetSelectOptions } from "../../helpers/rulesetOptions";
-import type { TournamentListItem } from "../../api/schemas/tournaments";
+import { useI18n } from "../../../i18n/I18nProvider";
+import { useLandingPage } from "../../../hooks/useLandingPage";
+import { RulesetDetailsModal } from "../../../components/rulesets/RulesetDetailsModal";
+import { buildRulesetSelectOptions } from "../../../helpers/rulesetOptions";
+import type { TournamentListItem } from "../../../api/schemas/tournaments";
 import {
   editTournamentFormSchema,
   type EditTournamentFormValues,
   isoToYmd,
   ymdToMidnightIso,
 } from "./editTournamentForm";
+import { IconEye } from "@tabler/icons-react";
 
 type EditTournamentModalProps = {
   tournament: TournamentListItem | null;
@@ -193,6 +194,7 @@ export function EditTournamentModal({
                 <Button
                   fullWidth
                   variant="default"
+                  leftSection={<IconEye size={16}/>}
                   disabled={
                     selectedRuleset === "none" ||
                     selectedRuleset == null ||

@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { AppBindings } from '../types/app';
 import { requireUser } from '../lib/auth_session';
 import { httpError } from '../lib/http';
-import { requirePermission } from '../lib/permissions';
+import { isGlobalAdmin, requirePermission } from '../lib/permissions';
 import {
   createRulesetDto,
   deleteRulesetDto,
@@ -27,13 +27,27 @@ rulesets.post('/validate', async (c) => {
 });
 
 rulesets.get('/', async (c) => {
-  return c.json({ rulesets: await listRulesetDtos(c.env) });
+  const user = c.get('user');
+  return c.json({
+    rulesets: await listRulesetDtos(c.env, {
+      requesterUserId: user?.id ?? null,
+      isGlobalAdmin: isGlobalAdmin(user),
+    }),
+  });
 });
 
 rulesets.get('/:id', async (c) => {
   const id = Number(c.req.param('id'));
   if (!Number.isInteger(id) || id <= 0) httpError(400, 'Invalid ruleset id');
-  return c.json({ ruleset: await getRulesetDto(c.env, id) });
+
+  const user = c.get('user');
+
+  return c.json({
+    ruleset: await getRulesetDto(c.env, id, {
+      requesterUserId: user?.id ?? null,
+      isGlobalAdmin: isGlobalAdmin(user),
+    }),
+  });
 });
 
 rulesets.post('/', requirePermission('ruleset.create'), async (c) => {
@@ -46,7 +60,12 @@ rulesets.post('/', requirePermission('ruleset.create'), async (c) => {
     name,
     config: body.config,
     createdByUserId: user!.id,
-  });
+  },
+  {
+    requesterUserId: user?.id ?? null,
+    isGlobalAdmin: isGlobalAdmin(user),
+  }
+);
 
   return c.json({ ok: true, ruleset }, 201);
 });
@@ -56,20 +75,34 @@ rulesets.put(
   requirePermission('ruleset.update.own', async (c) => {
     const id = Number(c.req.param('id'));
     if (!Number.isInteger(id) || id <= 0) httpError(400, 'Invalid ruleset id');
-    const existing = await getRulesetDto(c.env, id);
-    return { ownerUserId: existing.created_by_user_id };
+
+    const user = c.get('user');
+    const existing = await getRulesetDto(c.env, id, {
+      requesterUserId: user?.id ?? null,
+      isGlobalAdmin: isGlobalAdmin(user),
+    });
+
+    return { ownerUserId: existing.created_by_user_id ?? undefined };
   }),
   async (c) => {
     const id = Number(c.req.param('id'));
+    const user = c.get('user');
     const body = await c.req.json<{ name?: string; config?: unknown }>();
     const name = body.name?.trim();
     if (!name) httpError(400, 'name is required');
 
-    const ruleset = await updateRulesetDto(c.env, {
-      id,
-      name,
-      config: body.config,
-    });
+    const ruleset = await updateRulesetDto(
+      c.env,
+      {
+        id,
+        name,
+        config: body.config,
+      },
+      {
+        requesterUserId: user?.id ?? null,
+        isGlobalAdmin: isGlobalAdmin(user),
+      }
+    );
 
     return c.json({ ok: true, ruleset });
   }
@@ -80,13 +113,18 @@ rulesets.delete(
   requirePermission('ruleset.update.own', async (c) => {
     const id = Number(c.req.param('id'));
     if (!Number.isInteger(id) || id <= 0) httpError(400, 'Invalid ruleset id');
-    const existing = await getRulesetDto(c.env, id);
-    return { ownerUserId: existing.created_by_user_id };
+
+    const user = c.get('user');
+    const existing = await getRulesetDto(c.env, id, {
+      requesterUserId: user?.id ?? null,
+      isGlobalAdmin: isGlobalAdmin(user),
+    });
+
+    return { ownerUserId: existing.created_by_user_id ?? undefined };
   }),
   async (c) => {
     const id = Number(c.req.param('id'));
-    const result = await deleteRulesetDto(c.env, id);
-    if ((result.meta.changes ?? 0) === 0) httpError(404, 'Ruleset not found');
+    await deleteRulesetDto(c.env, id);
     return c.json({ ok: true });
   }
 );

@@ -28,7 +28,7 @@ export const en = {
   
   "landing.deleteTournament.confirm": "Are you sure you want to delete this tournament?",
   
-  "landing.createTournament.openAriaLabel": "Create tournament",
+  "landing.createTournament.tooltip": "Create tournament",
   "landing.createTournament.title": "Create tournament",
   "landing.createTournament.actions.create": "Create",
   "landing.createTournament.errors.submitFailed": "Failed to create tournament",
@@ -64,6 +64,8 @@ export const en = {
   "landing.editTournament.fields.startsAt.placeholder": "YYYY-MM-DD",
   "landing.editTournament.fields.endsAt.label": "End date",
   "landing.editTournament.fields.endsAt.placeholder": "YYYY-MM-DD",
+
+  "landing.createRuleset.tooltip": "Create ruleset",
 
   "nav.dashboard": "Dashboard",
   "nav.divisions": "Divisions",

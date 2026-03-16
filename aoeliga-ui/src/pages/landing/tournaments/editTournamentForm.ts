@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { updateTournamentInputSchema } from "../../api/schemas/tournaments";
+import { updateTournamentInputSchema } from "../../../api/schemas/tournaments";
 
 export const editTournamentFormSchema = updateTournamentInputSchema.extend({
   description: z.string().optional().or(z.literal("")),

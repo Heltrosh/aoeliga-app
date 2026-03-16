@@ -143,9 +143,49 @@ export const rulesetSummarySchema = z.object({
   stages: z.array(rulesetSummaryStageSchema),
 });
 
+export const rulesetUsageTournamentSchema = z.object({
+  id: z.number(),
+  slug: z.string(),
+  name: z.string(),
+});
+
+export const rulesetUsageDivisionSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  tournament_id: z.number(),
+  tournament_name: z.string(),
+  tournament_slug: z.string(),
+});
+
+export const rulesetUsageSchema = z.object({
+  tournament_default_count: z.number().int().nonnegative(),
+  division_count: z.number().int().nonnegative(),
+  is_in_use: z.boolean(),
+  tournament_defaults: z.array(rulesetUsageTournamentSchema).optional().default([]),
+  divisions: z.array(rulesetUsageDivisionSchema).optional().default([]),
+});
+
+export const rulesetPermissionsSchema = z.object({
+  can_edit: z.boolean(),
+  can_delete: z.boolean(),
+});
+
+export const rulesetLifecycleSchema = z.object({
+  is_locked: z.boolean(),
+  lock_reason: z.string().nullable(),
+});
+
 export const rulesetListItemSchema = z.object({
   id: z.number(),
   name: z.string(),
+  created_at: z.string().optional(),
+  created_by_user_id: z.number().nullable().optional(),
+  creator_display_name: z.string().nullable().optional(),
+  creator_discord_name: z.string().nullable().optional(),
+  summary: rulesetSummarySchema,
+  usage: rulesetUsageSchema,
+  permissions: rulesetPermissionsSchema,
+  lifecycle: rulesetLifecycleSchema,
 });
 
 export const rulesetsListResponseSchema = z.object({
@@ -160,11 +200,33 @@ export const rulesetDetailDataSchema = z.object({
   creator_display_name: z.string().nullable().optional(),
   creator_discord_name: z.string().nullable().optional(),
   config: rulesetConfigSchema,
-  summary: rulesetSummarySchema.optional(),
+  summary: rulesetSummarySchema,
+  usage: rulesetUsageSchema,
+  permissions: rulesetPermissionsSchema,
+  lifecycle: rulesetLifecycleSchema,
 });
 
 export const rulesetDetailResponseSchema = z.object({
   ruleset: rulesetDetailDataSchema,
+});
+
+export const rulesetMutationResponseSchema = z.object({
+  ok: z.boolean(),
+  ruleset: rulesetDetailDataSchema,
+});
+
+export const rulesetDeleteResponseSchema = z.object({
+  ok: z.boolean(),
+});
+
+export const createRulesetInputSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  config: z.unknown(),
+});
+
+export const updateRulesetInputSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  config: z.unknown(),
 });
 
 export type RulesetConfig = z.infer<typeof rulesetConfigSchema>;
@@ -173,3 +235,5 @@ export type RulesetListItem = z.infer<typeof rulesetListItemSchema>;
 export type RulesetDetail = z.infer<typeof rulesetDetailDataSchema>;
 export type RulesetMatchFormat = z.infer<typeof rulesetMatchFormatSchema>;
 export type RulesetScoringSystem = z.infer<typeof rulesetScoringSystemSchema>;
+export type CreateRulesetInput = z.infer<typeof createRulesetInputSchema>;
+export type UpdateRulesetInput = z.infer<typeof updateRulesetInputSchema>;

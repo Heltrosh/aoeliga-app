@@ -1,28 +1,37 @@
 import { Fragment } from "react";
 import {
+  Alert,
+  Badge,
+  Center,
+  Divider,
+  Group,
+  List,
+  Loader,
   Modal,
+  Paper,
   Stack,
   Text,
-  Group,
-  Badge,
-  Divider,
-  Loader,
-  Center,
-  Alert,
-  List,
   ThemeIcon,
 } from "@mantine/core";
-import { IconInfoCircle, IconCheck } from "@tabler/icons-react";
+import { IconCheck, IconInfoCircle, IconTrophy } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 
 import { fetchRulesetById } from "../../api/rulesets";
 import { rulesetKeys } from "../../api/queryKeys";
-import type {
-  RulesetConfig,
-  RulesetMatchFormat,
-  RulesetScoringSystem,
-  RulesetStage,
-} from "../../api/schemas/rulesets";
+import type { RulesetConfig, RulesetStage } from "../../api/schemas/rulesets";
+import {
+  formatAdvancement,
+  formatCadence,
+  formatMatchPolicy,
+  formatParticipants,
+  formatRoundRobinDetails,
+  formatScoringSystemLabel,
+  formatSeeding,
+  formatStageType,
+  formatTiebreakerLabel,
+  getPrimaryStageFormatsSummary,
+  getTournamentStructureSummary,
+} from "./rulesetDetailsHelpers";
 
 type RulesetDetailsModalProps = {
   opened: boolean;
@@ -30,97 +39,44 @@ type RulesetDetailsModalProps = {
   rulesetId: number | null;
 };
 
-function getMatchFormatEntries(
-  formats: RulesetConfig["match_formats"],
-): Array<[string, RulesetMatchFormat]> {
-  return Object.entries(formats) as Array<[string, RulesetMatchFormat]>;
+function OverviewCard({ config }: { config: RulesetConfig }) {
+
+  return (
+    <Paper withBorder radius="md" p="md">
+        <div>
+          <Text fw={700} size="sm" tt="uppercase" c="dimmed">
+            Overview
+          </Text>
+          <Text size="sm" mt={6}>
+            {getTournamentStructureSummary(config)}
+          </Text>
+          <Text size="sm" c="dimmed" mt={4}>
+            {getPrimaryStageFormatsSummary(config)}
+          </Text>
+        </div>
+    </Paper>
+  );
 }
 
-function getScoringSystemEntries(
-  scoringSystems: RulesetConfig["scoring_systems"],
-): Array<[string, RulesetScoringSystem]> {
-  return Object.entries(scoringSystems) as Array<[string, RulesetScoringSystem]>;
-}
+function StageInfoRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}) {
+  if (!value) return null;
 
-function formatMatchFormatLabel(format: RulesetMatchFormat): string {
-  switch (format.type) {
-    case "best_of":
-      return `Best of ${format.games}`;
-    case "play_all":
-      return `Play all ${format.games}`;
-  }
-}
-
-function formatScoringSystemLabel(system: RulesetScoringSystem): string {
-  switch (system.type) {
-    case "match_points":
-      return `Match points: win ${system.win}, loss ${system.loss}, draw ${system.draw ?? 0}`;
-    case "game_points":
-      return `Game points: win ${system.per_game_win}, loss ${system.per_game_loss}`;
-    case "hybrid":
-      return `Hybrid: match win ${system.match_win}, match loss ${system.match_loss}, game win ${system.game_win}, game loss ${system.game_loss}`;
-  }
-}
-
-function formatStageType(type: RulesetStage["type"]): string {
-  switch (type) {
-    case "round_robin":
-      return "Round robin";
-    case "single_elimination":
-      return "Single elimination";
-    case "double_elimination":
-      return "Double elimination";
-  }
-}
-
-function formatParticipants(stage: RulesetStage): string {
-  if (stage.participants.source === "division_players") {
-    return "All players in the division";
-  }
-
-  const selector =
-    stage.participants.selector.type === "top_n" &&
-    stage.participants.selector.count
-      ? `Top ${stage.participants.selector.count}`
-      : stage.participants.selector.type;
-
-  return `${selector} from stage "${stage.participants.stage_id}"`;
-}
-
-function formatCadence(config: RulesetConfig, stage: RulesetStage): string {
-  const days =
-    stage.cadence?.round_duration_days ?? config.calendar?.round_duration_days;
-
-  if (!days) return "Not specified";
-  if (days === 7) return "1 round per 7 days";
-  if (days === 1) return "1 round per day";
-  return `1 round per ${days} days`;
-}
-
-function formatMatchPolicy(stage: RulesetStage, config: RulesetConfig): string[] {
-  const lines: string[] = [];
-  const defaultFormat = config.match_formats[stage.match_format_policy.default_format];
-
-  if (defaultFormat) {
-    lines.push(`Default: ${formatMatchFormatLabel(defaultFormat)}`);
-  } else {
-    lines.push(`Default format id: ${stage.match_format_policy.default_format}`);
-  }
-
-  for (const override of stage.match_format_policy.overrides ?? []) {
-    const overrideFormat = config.match_formats[override.format];
-    const label = overrideFormat
-      ? formatMatchFormatLabel(overrideFormat)
-      : override.format;
-
-    if (override.round_number) {
-      lines.push(`Round ${override.round_number}: ${label}`);
-    } else if (override.round) {
-      lines.push(`${override.round}: ${label}`);
-    }
-  }
-
-  return lines;
+  return (
+    <Group align="flex-start" gap="xs" wrap="nowrap">
+      <Text size="sm" fw={600} w={110}>
+        {label}
+      </Text>
+      <Text size="sm" c="dimmed" style={{ flex: 1 }}>
+        {value}
+      </Text>
+    </Group>
+  );
 }
 
 function StageSection({
@@ -135,61 +91,94 @@ function StageSection({
       ? config.scoring_systems[stage.scoring.system]
       : null;
 
+  const matchPolicy = formatMatchPolicy(stage, config);
+  const roundRobinDetails = formatRoundRobinDetails(stage);
+  const advancement = formatAdvancement(stage, config);
+  const seeding = formatSeeding(stage, config);
+  const cadence = formatCadence(config, stage);
+  const participants = formatParticipants(stage, config);
+
   return (
-    <Stack gap={6}>
-      <Group gap="xs">
-        <Text fw={700}>{stage.name}</Text>
-        <Badge variant="light" color="gold">
-          {formatStageType(stage.type)}
-        </Badge>
-      </Group>
+    <Paper withBorder radius="md" p="md">
+      <Stack gap="md">
+        <Group justify="space-between" align="flex-start">
+          <div>
+            <Group gap="xs">
+              <Text fw={700} size="lg">
+                {stage.name}
+              </Text>
+              <Badge variant="light" color="gold">
+                {formatStageType(stage.type)}
+              </Badge>
+            </Group>
+          </div>
+        </Group>
 
-      <Text size="sm">Stage id: {stage.id}</Text>
-      <Text size="sm">Participants: {formatParticipants(stage)}</Text>
-      <Text size="sm">Cadence: {formatCadence(config, stage)}</Text>
+        <Stack gap={8}>
+          <StageInfoRow label="Participants" value={participants} />
+          <StageInfoRow label="Format" value={roundRobinDetails} />
+          <StageInfoRow label="Scoring" value={scoring ? formatScoringSystemLabel(scoring) : null} />
+          <StageInfoRow label="Advancement" value={advancement} />
+          <StageInfoRow label="Seeding" value={seeding} />
+          <StageInfoRow label="Schedule" value={cadence} />
+        </Stack>
 
-      {stage.type === "round_robin" && (
-        <Text size="sm">Legs: {stage.round_robin.legs}</Text>
-      )}
+        <Divider />
 
-      {scoring && (
-        <Text size="sm">Scoring: {formatScoringSystemLabel(scoring)}</Text>
-      )}
+        <Stack gap={8}>
+          <Text fw={600} size="sm">
+            Match Format
+          </Text>
 
-      {stage.advancement && (
-        <Text size="sm">
-          Advancement: {stage.advancement.type}
-          {stage.advancement.count ? ` (${stage.advancement.count})` : ""}
-        </Text>
-      )}
+          <List
+            size="sm"
+            spacing={4}
+            icon={
+              <ThemeIcon size={18} radius="xl" color="gold" variant="light">
+                <IconCheck size={12} />
+              </ThemeIcon>
+            }
+          >
+            {matchPolicy.map((item) => (
+              <List.Item key={`${item.label}-${item.value}`}>
+                <Text span fw={600}>
+                  {item.label}:
+                </Text>{" "}
+                {item.value}
+              </List.Item>
+            ))}
+          </List>
+        </Stack>
 
-      {stage.seeding && (
-        <Text size="sm">Seeding: {stage.seeding.type}</Text>
-      )}
+        {stage.tiebreakers && stage.tiebreakers.length > 0 ? (
+          <>
+            <Divider />
+            <Stack gap={8}>
+              <Text fw={600} size="sm">
+                Tiebreakers
+              </Text>
 
-      {stage.tiebreakers && stage.tiebreakers.length > 0 && (
-        <Text size="sm">Tiebreakers: {stage.tiebreakers.join(" → ")}</Text>
-      )}
-
-      <Stack gap={2}>
-        <Text size="sm" fw={600}>
-          Match formats
-        </Text>
-        <List
-          size="sm"
-          spacing={2}
-          icon={
-            <ThemeIcon size={18} radius="xl" color="gold" variant="light">
-              <IconCheck size={12} />
-            </ThemeIcon>
-          }
-        >
-          {formatMatchPolicy(stage, config).map((line) => (
-            <List.Item key={line}>{line}</List.Item>
-          ))}
-        </List>
+              <List
+                size="sm"
+                spacing={4}
+                withPadding
+                icon={
+                  <ThemeIcon size={18} radius="xl" color="gray" variant="light">
+                    <IconTrophy size={12} />
+                  </ThemeIcon>
+                }
+              >
+                {stage.tiebreakers.map((tiebreaker) => (
+                  <List.Item key={tiebreaker}>
+                    {formatTiebreakerLabel(tiebreaker)}
+                  </List.Item>
+                ))}
+              </List>
+            </Stack>
+          </>
+        ) : null}
       </Stack>
-    </Stack>
+    </Paper>
   );
 }
 
@@ -210,7 +199,7 @@ export function RulesetDetailsModal({
       onClose={onClose}
       title="Ruleset details"
       centered
-      size="lg"
+      size="xl"
     >
       {rulesetId == null ? (
         <Alert icon={<IconInfoCircle size={16} />} color="gray" variant="light">
@@ -225,9 +214,9 @@ export function RulesetDetailsModal({
           Failed to load ruleset details.
         </Alert>
       ) : rulesetQuery.data ? (
-        <Stack gap="md">
+        <Stack gap="lg">
           <div>
-            <Text fw={700} size="lg">
+            <Text fw={700} size="xl">
               {rulesetQuery.data.name}
             </Text>
             <Text size="sm" c="dimmed">
@@ -235,35 +224,15 @@ export function RulesetDetailsModal({
             </Text>
           </div>
 
-          <Stack gap={4}>
-            <Text fw={600}>Defined match formats</Text>
-            {getMatchFormatEntries(rulesetQuery.data.config.match_formats).map(
-              ([key, value]) => (
-                <Text key={key} size="sm">
-                  {key}: {formatMatchFormatLabel(value)}
-                </Text>
-              ),
-            )}
-          </Stack>
+          <OverviewCard config={rulesetQuery.data.config} />
 
-          <Stack gap={4}>
-            <Text fw={600}>Defined scoring systems</Text>
-            {getScoringSystemEntries(rulesetQuery.data.config.scoring_systems).map(
-              ([key, value]) => (
-                <Text key={key} size="sm">
-                  {key}: {formatScoringSystemLabel(value)}
-                </Text>
-              ),
-            )}
-          </Stack>
-
-          <Divider />
-
-          <Stack gap="lg">
+          <Stack gap="md">
             {rulesetQuery.data.config.stages.map((stage, index) => (
               <Fragment key={stage.id}>
                 <StageSection stage={stage} config={rulesetQuery.data.config} />
-                {index < rulesetQuery.data.config.stages.length - 1 && <Divider />}
+                {index < rulesetQuery.data.config.stages.length - 1 ? (
+                  <Divider variant="dashed" />
+                ) : null}
               </Fragment>
             ))}
           </Stack>

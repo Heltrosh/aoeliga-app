@@ -11,13 +11,14 @@ import {
   Select,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
+import { IconEye } from "@tabler/icons-react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { useI18n } from "../../i18n/I18nProvider";
-import { useLandingPage } from "../../hooks/useLandingPage";
-import { RulesetDetailsModal } from "../../components/rulesets/RulesetDetailsModal";
-import { buildRulesetSelectOptions } from "../../helpers/rulesetOptions";
+import { useI18n } from "../../../i18n/I18nProvider";
+import { useLandingPage } from "../../../hooks/useLandingPage";
+import { RulesetDetailsModal } from "../../../components/rulesets/RulesetDetailsModal";
+import { buildRulesetSelectOptions } from "../../../helpers/rulesetOptions";
 import {
   createTournamentFormSchema,
   type CreateTournamentFormValues,
@@ -168,6 +169,7 @@ export function CreateTournamentModal({
                 <Button
                   fullWidth
                   variant="default"
+                  leftSection={<IconEye size={16} />}
                   disabled={
                     selectedRuleset === "none" ||
                     selectedRuleset == null ||
