@@ -22,7 +22,10 @@ export const cs = {
   "landing.empty": "Zatím nejsou k dispozici žádné turnaje.",
 
   "landing.errors.loadTournaments": "Nepodařilo se načíst turnaje",
+  
   "landing.archived.sectionTitle": "Archivované turnaje",
+  "landing.archived.collapse": "Sbalit archivované turnaje",
+  "landing.archived.expand": "Rozbalit archivované turnaje",
 
   "landing.tournament.actions.edit": "Upravit",
   "landing.tournament.actions.delete": "Smazat",

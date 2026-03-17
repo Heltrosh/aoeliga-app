@@ -22,6 +22,8 @@ export const en = {
   "landing.errors.loadTournaments": "Error loading tournaments",
   
   "landing.archived.sectionTitle": "Archived tournaments",
+  "landing.archived.collapse": "Collapse archived tournaments",
+  "landing.archived.expand": "Expand archived tournaments",
   
   "landing.tournament.actions.edit": "Edit",
   "landing.tournament.actions.delete": "Delete",
@@ -83,9 +85,11 @@ export const en = {
   "landing.admin.users.table.banned": "Banned",
   "landing.admin.users.table.active": "Active",
   "landing.admin.users.table.removeadmin": "Remove admin privileges",
-  "landing.admin.users.table.addadmin": "Remove admin privileges",
+  "landing.admin.users.table.addadmin": "Add admin privileges",
   "landing.admin.users.table.unban": "Unban user",
   "landing.admin.users.table.ban": "Ban user",
+  "landing.admin.users.ban.reason.title": "Ban reason",
+  "landing.admin.users.ban.reason.placeholder": "Optional note shown to admins",
 
   "nav.dashboard": "Dashboard",
   "nav.divisions": "Divisions",

@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import {
-  Accordion,
   ActionIcon,
+  Box,
+  Collapse,
+  Group,
   Loader,
   SimpleGrid,
   Text,
   Tooltip,
 } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronUp, IconPlus } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../../auth/AuthContext";
@@ -19,6 +21,7 @@ import { EditTournamentModal } from "./EditTournamentModal";
 import { TournamentCard } from "./TournamentCard";
 import { LandingShell } from "../LandingShell";
 import { getLandingNavigationAccess } from "../landingAccess";
+import { AppSurface } from "../../../components/common/AppSurface";
 
 export default function LandingPage() {
   const nav = useNavigate();
@@ -38,7 +41,7 @@ export default function LandingPage() {
     () => tournaments.filter((tournament) => tournament.status !== "archived"),
     [tournaments],
   );
-
+  const [archivedOpened, setArchivedOpened] = useState(false);
   const archivedTournaments = useMemo(
     () => tournaments.filter((tournament) => tournament.status === "archived"),
     [tournaments],
@@ -107,13 +110,36 @@ export default function LandingPage() {
           )}
 
           {archivedTournaments.length > 0 && (
-            <Accordion variant="separated">
-              <Accordion.Item value="archived">
-                <Accordion.Control>
+            <AppSurface p="lg">
+              <Group
+                justify="space-between"
+                align="center"
+                style={{ cursor: "pointer" }}
+                onClick={() => setArchivedOpened((current) => !current)}
+              >
+                <Text fw={700}>
                   {t("landing.archived.sectionTitle")} ({archivedTournaments.length})
-                </Accordion.Control>
+                </Text>
 
-                <Accordion.Panel>
+                <ActionIcon
+                  variant="subtle"
+                  color="gold"
+                  aria-label={
+                    archivedOpened
+                      ? t("landing.archived.collapse")
+                      : t("landing.archived.expand")
+                  }
+                >
+                  {archivedOpened ? (
+                    <IconChevronUp size={18} />
+                  ) : (
+                    <IconChevronDown size={18} />
+                  )}
+                </ActionIcon>
+              </Group>
+
+              <Collapse in={archivedOpened}>
+                <Box mt="md">
                   <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
                     {archivedTournaments.map((tournament) => (
                       <TournamentCard
@@ -125,9 +151,9 @@ export default function LandingPage() {
                       />
                     ))}
                   </SimpleGrid>
-                </Accordion.Panel>
-              </Accordion.Item>
-            </Accordion>
+                </Box>
+              </Collapse>
+            </AppSurface>
           )}
         </>
       )}
