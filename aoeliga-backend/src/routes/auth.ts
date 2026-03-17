@@ -114,11 +114,14 @@ auth.get("/discord/callback", async (c) => {
        discord_name = excluded.discord_name, display_name = excluded.display_name, avatar = excluded.avatar, last_login_at = datetime('now')`
   ).bind(me.id, me.username ?? null, me.global_name ?? null, me.avatar ?? null).run();
 
-  const userRow = await c.env.DB.prepare(`SELECT id FROM users WHERE discord_id = ?`).bind(me.id).first<{ id: number; is_banned: number }>();
+  const userRow = await c.env.DB.prepare(`SELECT id, is_banned FROM users WHERE discord_id = ?`).bind(me.id).first<{ id: number; is_banned: number }>();
 
   if (!userRow)
     httpError(500, "Failed to load user after login");
 
+  if (userRow.is_banned) {
+    httpError(403, "Your account has been banned");
+  }
   // create session (30 days)
   const sessionId = crypto.randomUUID().replace(/-/g, "");
   const maxAgeSeconds = 60 * 60 * 24 * 30;

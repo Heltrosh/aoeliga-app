@@ -21,6 +21,7 @@ import {
 } from "@tabler/icons-react";
 
 import type { UserListItem } from "../../api/users";
+import { AppSurface } from "../common/AppSurface";
 
 type WithNames = {
   id?: number;
@@ -237,16 +238,7 @@ export function CollapsibleTile({
   const [opened, setOpened] = useState(defaultOpen);
 
   return (
-    <Card
-      withBorder
-      radius="lg"
-      p="lg"
-      style={{
-        background: "rgba(17, 27, 43, 0.78)",
-        borderColor: "rgba(229,154,42,0.28)",
-        boxShadow: "0 0 0 1px rgba(229,154,42,0.08) inset",
-      }}
-    >
+    <AppSurface p="lg">
       <Group
         justify="space-between"
         align="flex-start"
@@ -268,7 +260,7 @@ export function CollapsibleTile({
       <Collapse in={opened}>
         <div style={{ marginTop: 16 }}>{children}</div>
       </Collapse>
-    </Card>
+    </AppSurface>
   );
 }
 

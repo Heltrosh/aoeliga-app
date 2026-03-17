@@ -36,21 +36,21 @@ WHERE name IN (
 -- ============================================================
 -- USERS
 -- ============================================================
-INSERT INTO users (id, discord_id, discord_name, display_name, avatar, is_admin, is_banned, last_login_at)
+INSERT INTO users (id, discord_id, discord_name, display_name, avatar, is_admin, is_banned, ban_reason, last_login_at)
 VALUES
-  (1,  '164698420777320448', 'heltrosh',   'Heltrosh',      'b5bb8a4921fee3dff2bdbdfd08f4e7a3', 1, 0, '2026-03-10 18:30:00'),
-  (2,  '100000000000000002', 'player2',    'Player Two',    NULL, 0, 0, '2026-03-10 18:31:00'),
-  (3,  '100000000000000003', 'player3',    'Player Three',  NULL, 0, 0, '2026-03-10 18:32:00'),
-  (4,  '100000000000000004', 'player4',    'Player Four',   NULL, 0, 0, '2026-03-10 18:33:00'),
-  (5,  '100000000000000005', 'player5',    'Player Five',   NULL, 0, 0, '2026-03-10 18:34:00'),
-  (6,  '100000000000000006', 'player6',    'Player Six',    NULL, 0, 0, '2026-03-10 18:35:00'),
-  (7,  '100000000000000007', 'player7',    'Player Seven',  NULL, 0, 0, '2026-03-10 18:36:00'),
-  (8,  '100000000000000008', 'player8',    'Player Eight',  NULL, 0, 0, '2026-03-10 18:37:00'),
-  (9,  '100000000000000009', 'caster1',    'Caster One',    NULL, 0, 0, '2026-03-10 18:38:00'),
-  (10, '100000000000000010', 'mod1',       'Moderator One', NULL, 0, 0, '2026-03-10 18:39:00'),
-  (11, '100000000000000011', 'pending1',   'Pending One',   NULL, 0, 0, '2026-03-10 18:40:00'),
-  (12, '100000000000000012', 'pending2',   'Pending Two',   NULL, 0, 0, '2026-03-10 18:41:00'),
-  (13, '100000000000000013', 'rejected1',  'Rejected One',  NULL, 0, 0, '2026-03-10 18:42:00');
+  (1,  '164698420777320448', 'heltrosh',   'Heltrosh',      'b5bb8a4921fee3dff2bdbdfd08f4e7a3', 1, 0, NULL, '2026-03-10 18:30:00'),
+  (2,  '100000000000000002', 'player2',    'Player Two',    NULL, 0, 0, NULL, '2026-03-10 18:31:00'),
+  (3,  '100000000000000003', 'player3',    'Player Three',  NULL, 0, 0, NULL, '2026-03-10 18:32:00'),
+  (4,  '100000000000000004', 'player4',    'Player Four',   NULL, 0, 0, NULL, '2026-03-10 18:33:00'),
+  (5,  '100000000000000005', 'player5',    'Player Five',   NULL, 0, 0, NULL, '2026-03-10 18:34:00'),
+  (6,  '100000000000000006', 'player6',    'Player Six',    NULL, 0, 0, NULL, '2026-03-10 18:35:00'),
+  (7,  '100000000000000007', 'player7',    'Player Seven',  NULL, 0, 0, NULL, '2026-03-10 18:36:00'),
+  (8,  '100000000000000008', 'player8',    'Player Eight',  NULL, 0, 0, NULL, '2026-03-10 18:37:00'),
+  (9,  '100000000000000009', 'caster1',    'Caster One',    NULL, 0, 0, NULL, '2026-03-10 18:38:00'),
+  (10, '100000000000000010', 'mod1',       'Moderator One', NULL, 0, 0, NULL, '2026-03-10 18:39:00'),
+  (11, '100000000000000011', 'pending1',   'Pending One',   NULL, 0, 0, NULL, '2026-03-10 18:40:00'),
+  (12, '100000000000000012', 'pending2',   'Pending Two',   NULL, 0, 0, NULL, '2026-03-10 18:41:00'),
+  (13, '100000000000000013', 'rejected1',  'Rejected One',  NULL, 0, 0, NULL, '2026-03-10 18:42:00');
 
 -- ============================================================
 -- RULESET

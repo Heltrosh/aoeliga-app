@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   avatar        TEXT,
   is_admin      INTEGER NOT NULL DEFAULT 0,
   is_banned     INTEGER NOT NULL DEFAULT 0,
+  ban_reason    TEXT,
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   last_login_at TEXT,
 

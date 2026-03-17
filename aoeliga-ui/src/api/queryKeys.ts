@@ -17,3 +17,8 @@ export const rulesetKeys = {
   list: () => ["rulesets", "list"] as const,
   detail: (id: number | null) => ["rulesets", "detail", id] as const,
 };
+
+export const adminKeys = {
+  all: ["admin"] as const,
+  users: (query: string) => ["admin", "users", query] as const,
+};

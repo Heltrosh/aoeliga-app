@@ -11,12 +11,12 @@ admin.use('*', requirePermission('platform.admin'));
 admin.get('/users', async (c) => {
   const q = (c.req.query('q') ?? '').trim();
   const sql = q
-    ? `SELECT id, discord_id, discord_name, display_name, avatar, is_admin, is_banned, created_at, last_login_at
+    ? `SELECT id, discord_id, discord_name, display_name, avatar, is_admin, is_banned, ban_reason, created_at, last_login_at
        FROM users
        WHERE lower(coalesce(discord_name,'')) LIKE lower(?) OR lower(coalesce(display_name,'')) LIKE lower(?)
-       ORDER BY id DESC LIMIT 100`
-    : `SELECT id, discord_id, discord_name, display_name, avatar, is_admin, is_banned, created_at, last_login_at
-       FROM users ORDER BY id DESC LIMIT 100`;
+       ORDER BY coalesce (display_name, discord_name) ASC LIMIT 100`
+    : `SELECT id, discord_id, discord_name, display_name, avatar, is_admin, is_banned, ban_reason, created_at, last_login_at
+       FROM users ORDER BY coalesce (display_name, discord_name) ASC LIMIT 100`;
   const stmt = c.env.DB.prepare(sql);
   const rows = q ? await stmt.bind(`%${q}%`, `%${q}%`).all() : await stmt.all();
   return c.json({ users: rows.results ?? [] });
@@ -34,39 +34,69 @@ admin.get('/users/:id', async (c) => {
   return c.json({ user: row });
 });
 
-admin.patch('/users/:id/admin', async (c) => {
-  const id = Number(c.req.param('id'));
-  if (!Number.isInteger(id) || id <= 0)
-    httpError(400, "Invalid user id");
-  
-  const body = await c.req.json<{ is_admin?: boolean }>();
-  if (typeof body.is_admin !== 'boolean') 
-    httpError(400, 'is_admin boolean is required');
-  
-  const existing = await c.env.DB.prepare(`SELECT id FROM users WHERE id = ? LIMIT 1`).bind(id).first<{ id: number }>();
-  if (!existing)
-    httpError(404, "User not found");
+admin.patch("/users/:id/admin", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id)) httpError(400, "invalid user id");
 
-  await c.env.DB.prepare(`UPDATE users SET is_admin = ? WHERE id = ?`).bind(body.is_admin ? 1 : 0, id).run();
-  
+  const body = await c.req.json<{ is_admin?: boolean }>();
+
+  if (typeof body.is_admin !== "boolean") {
+    httpError(400, "is_admin must be a boolean");
+  }
+
+  const currentUser = c.get("user");
+  const currentUserId = currentUser?.id ?? null;
+
+  if (id === currentUserId && !body.is_admin) {
+    httpError(400, "you cannot remove your own admin privileges");
+  }
+
+  const result = await c.env.DB.prepare(
+    `UPDATE users
+     SET is_admin = ?
+     WHERE id = ?`
+  )
+    .bind(body.is_admin ? 1 : 0, id)
+    .run();
+
+  if ((result.meta.changes ?? 0) < 1) {
+    httpError(404, "User not found");
+  }
+
   return c.json({ ok: true });
 });
 
-admin.patch('/users/:id/ban', async (c) => {
-  const id = Number(c.req.param('id'));
-  if (!Number.isInteger(id) || id <= 0)
-    httpError(400, "Invalid user id");
+admin.patch("/users/:id/ban", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id)) httpError(400, "invalid user id");
 
-  const body = await c.req.json<{ is_banned?: boolean }>();
-  if (typeof body.is_banned !== 'boolean')
-     httpError(400, 'is_banned boolean is required');
-    
-  const existing = await c.env.DB.prepare(`SELECT id FROM users WHERE id = ? LIMIT 1`).bind(id).first<{ id: number }>();
-  if (!existing)
+  const body = await c.req.json<{
+    is_banned?: boolean;
+    ban_reason?: string | null;
+  }>();
+
+  if (typeof body.is_banned !== "boolean") {
+    httpError(400, "is_banned must be a boolean");
+  }
+
+  const normalizedReason =
+    body.is_banned
+      ? (body.ban_reason?.trim() || null)
+      : null;
+
+  const result = await c.env.DB.prepare(
+    `UPDATE users
+     SET is_banned = ?,
+         ban_reason = ?
+     WHERE id = ?`
+  )
+    .bind(body.is_banned ? 1 : 0, normalizedReason, id)
+    .run();
+
+  if ((result.meta.changes ?? 0) < 1) {
     httpError(404, "User not found");
-  
-  await c.env.DB.prepare(`UPDATE users SET is_banned = ? WHERE id = ?`).bind(body.is_banned ? 1 : 0, id).run();
-  
+  }
+
   return c.json({ ok: true });
 });
 

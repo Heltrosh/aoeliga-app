@@ -21,6 +21,7 @@ async function loadUserFromSession(c: Context<AppBindings>): Promise<AuthUser | 
      WHERE s.id = ?
        AND s.revoked_at IS NULL
        AND s.expires_at > datetime('now')
+       AND u.is_banned = 0
     LIMIT 1`
   ).bind(sessionId).first<AuthUser>();
 

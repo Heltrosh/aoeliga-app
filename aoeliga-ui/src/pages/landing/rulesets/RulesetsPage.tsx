@@ -5,7 +5,6 @@ import {
   Button,
   Group,
   Loader,
-  Paper,
   SegmentedControl,
   SimpleGrid,
   Stack,
@@ -40,6 +39,7 @@ import { useLandingPage } from "../../../hooks/useLandingPage";
 import { useI18n } from "../../../i18n/I18nProvider";
 import { getLandingNavigationAccess } from "../landingAccess";
 import { LandingShell } from "../LandingShell";
+import { AppSurface } from "../../../components/common/AppSurface";
 
 type FilterMode = "all" | "editable" | "in-use" | "unused";
 
@@ -88,15 +88,7 @@ function RulesetCard({
     ruleset.lifecycle.lock_reason ?? "This ruleset cannot be changed.";
 
   return (
-    <Paper 
-      withBorder 
-      radius="md"
-      p="md"
-      style={{
-        background: "rgba(17, 27, 43, 0.78)",
-        borderColor: "rgba(229,154,42,0.28)",
-        boxShadow: "0 0 0 1px rgba(229,154,42,0.08) inset",
-      }}>
+    <AppSurface p="md">
       <Stack gap="md">
         <Group justify="space-between" align="flex-start">
           <div>
@@ -205,7 +197,7 @@ function RulesetCard({
           </Group>
         </Group>
       </Stack>
-    </Paper>
+    </AppSurface>
   );
 }
 
@@ -315,15 +307,7 @@ export default function RulesetsPage() {
           <Loader />
         ) : (
           <Stack gap="md">
-            <Paper 
-              withBorder 
-              radius="md" 
-              p="md"
-              style={{
-                background: "rgba(17, 27, 43, 0.78)",
-                borderColor: "rgba(229,154,42,0.28)",
-                boxShadow: "0 0 0 1px rgba(229,154,42,0.08) inset",
-              }}>
+            <AppSurface p="md">
               <Group align="flex-end" grow>
                 <TextInput
                   label="Search"
@@ -350,37 +334,21 @@ export default function RulesetsPage() {
                   />
                 </div>
               </Group>
-            </Paper>
+            </AppSurface>
 
             {rulesetsQuery.isError ? (
-              <Paper 
-                withBorder 
-                radius="md"
-                p="xl"
-                style={{
-                  background: "rgba(17, 27, 43, 0.78)",
-                  borderColor: "rgba(229,154,42,0.28)",
-                  boxShadow: "0 0 0 1px rgba(229,154,42,0.08) inset",
-              }}>
+              <AppSurface p="xl">
                 <Text c="red">Failed to load rulesets.</Text>
-              </Paper>
+              </AppSurface>
             ) : filteredRulesets.length === 0 ? (
-              <Paper 
-                withBorder
-                radius="md"
-                p="xl"
-                style={{
-                  background: "rgba(17, 27, 43, 0.78)",
-                  borderColor: "rgba(229,154,42,0.28)",
-                  boxShadow: "0 0 0 1px rgba(229,154,42,0.08) inset",
-                }}>
+              <AppSurface p="xl">
                 <Stack gap="xs">
                   <Title order={4}>No rulesets found</Title>
                   <Text c="dimmed">
                     Try changing the search or filter, or create a new ruleset.
                   </Text>
                 </Stack>
-              </Paper>
+              </AppSurface>
             ) : (
               <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
                 {filteredRulesets.map((ruleset) => (
