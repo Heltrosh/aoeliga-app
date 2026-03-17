@@ -79,6 +79,13 @@ admin.patch("/users/:id/ban", async (c) => {
     httpError(400, "is_banned must be a boolean");
   }
 
+  const currentUser = c.get("user");
+  const currentUserId = currentUser?.id ?? null;
+
+  if (id === currentUserId && body.is_banned) {
+    httpError(400, "you cannot ban yourself");
+  }
+
   const normalizedReason =
     body.is_banned
       ? (body.ban_reason?.trim() || null)

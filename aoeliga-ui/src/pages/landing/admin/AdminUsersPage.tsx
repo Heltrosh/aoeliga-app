@@ -119,7 +119,7 @@ export default function AdminUsersPage() {
         {tournamentsQuery.isLoading || usersQuery.isLoading ? (
           <Loader />
         ) : usersQuery.isError ? (
-          <Text c="red">Failed to load users.</Text>
+          <Text c="red">{t("landing.admin.users.error")}</Text>
         ) : (
           <Stack gap="md">
             <Group>
@@ -128,22 +128,22 @@ export default function AdminUsersPage() {
                   style={{ display: "flex", alignItems: "center", gap: 6 }}
               >
                   <IconChevronLeft size={14} />
-                  Back to administration
+                  {t("landing.admin.users.back")}
               </Anchor>
             </Group>
             <AppSurface p="xl">
               <Stack gap="xs">
-                <Title order={3}>User moderation</Title>
+                <Title order={3}>{t("landing.admin.users.title")}</Title>
                 <Text c="dimmed">
-                  Ban or unban users from accessing the app.
+                  {t("landing.admin.users.description")}
                 </Text>
               </Stack>
             </AppSurface>
 
             <AppSurface p="md">
               <TextInput
-                label="Search"
-                placeholder="Search by Discord or display name"
+                label={t("landing.admin.users.search")}
+                placeholder={t("landing.admin.users.search.placeholder")}
                 value={search}
                 onChange={(event) => setSearch(event.currentTarget.value)}
                 leftSection={<IconSearch size={16} />}
@@ -154,13 +154,13 @@ export default function AdminUsersPage() {
               <Table striped highlightOnHover>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>User</Table.Th>
-                    <Table.Th>Discord</Table.Th>
-                    <Table.Th>Status</Table.Th>
-                    <Table.Th>Admin</Table.Th>
-                    <Table.Th>Reason</Table.Th>
-                    <Table.Th>Last login</Table.Th>
-                    <Table.Th style={{ width: 100 }}>Action</Table.Th>
+                    <Table.Th>{t("landing.admin.users.table.user")}</Table.Th>
+                    <Table.Th>{t("landing.admin.users.table.discord")}</Table.Th>
+                    <Table.Th>{t("landing.admin.users.table.admin")}</Table.Th>
+                    <Table.Th>{t("landing.admin.users.table.status")}</Table.Th>
+                    <Table.Th>{t("landing.admin.users.table.reason")}</Table.Th>
+                    <Table.Th>{t("landing.admin.users.table.lastlogin")}</Table.Th>
+                    <Table.Th style={{ width: 100 }}>{t("landing.admin.users.table.action")}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
 
@@ -183,20 +183,20 @@ export default function AdminUsersPage() {
                         <Table.Td>
                           <Badge
                             variant="light"
-                            color={isBanned ? "red" : "green"}
+                            color={entry.is_admin === 1 ? "gold" : "gray"}
                           >
-                            {isBanned ? "Banned" : "Active"}
+                            {entry.is_admin === 1 ? t("landing.admin.users.table.admin") : t("landing.admin.users.table.user")}
                           </Badge>
                         </Table.Td>
 
                         <Table.Td>
                           <Badge
                             variant="light"
-                            color={entry.is_admin === 1 ? "gold" : "gray"}
+                            color={isBanned ? "red" : "green"}
                           >
-                            {entry.is_admin === 1 ? "Admin" : "User"}
+                            {isBanned ? t("landing.admin.users.table.banned") : t("landing.admin.users.table.active")}
                           </Badge>
-                        </Table.Td>
+                        </Table.Td>                        
 
                         <Table.Td>
                           <Text size="sm" c="dimmed">
@@ -214,8 +214,8 @@ export default function AdminUsersPage() {
                           <Tooltip
                             label={
                                 entry.is_admin === 1
-                                ? "Remove admin privileges"
-                                : "Make global admin"
+                                ? t("landing.admin.users.table.removeadmin")
+                                : t("landing.admin.users.table.addadmin")
                             }
                             >
                             <ActionIcon
@@ -236,7 +236,7 @@ export default function AdminUsersPage() {
                                 )}
                             </ActionIcon>
                           </Tooltip>
-                          <Tooltip label={isBanned ? "Unban user" : "Ban user"}>
+                          <Tooltip label={isBanned ? t("landing.admin.users.table.unban") : t("landing.admin.users.table.ban")}>
                             <ActionIcon
                               color={isBanned ? "green" : "red"}
                               variant="light"
@@ -275,7 +275,7 @@ export default function AdminUsersPage() {
       <Modal
         opened={banTarget != null}
         onClose={closeBanModal}
-        title="Ban user"
+        title={t("landing.admin.users.table.ban")}
         centered
       >
         <Stack gap="md">
@@ -288,8 +288,8 @@ export default function AdminUsersPage() {
           </Text>
 
           <Textarea
-            label="Ban reason"
-            placeholder="Optional note shown to admins"
+            label={t("landing.admin.users.ban.reason.title")}
+            placeholder={t("landing.admin.users.ban.reason.placeholder")}
             value={banReason}
             onChange={(event) => setBanReason(event.currentTarget.value)}
             autosize
@@ -314,7 +314,7 @@ export default function AdminUsersPage() {
                 });
               }}
             >
-              Ban user
+              {t("landing.admin.users.table.ban")}
             </Button>
           </Group>
         </Stack>

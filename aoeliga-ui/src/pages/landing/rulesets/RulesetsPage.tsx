@@ -88,7 +88,7 @@ function RulesetCard({
     ruleset.lifecycle.lock_reason ?? "This ruleset cannot be changed.";
 
   return (
-    <AppSurface p="md">
+    <AppSurface variant="card" p="md">
       <Stack gap="md">
         <Group justify="space-between" align="flex-start">
           <div>

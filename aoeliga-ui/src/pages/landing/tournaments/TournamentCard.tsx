@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { ActionIcon, Badge, Card, Group, Text, Title, Box } from "@mantine/core";
+import { ActionIcon, Badge, Group, Text, Title, Box } from "@mantine/core";
 import { IconEdit, IconTrash } from "@tabler/icons-react";
 
 import { useI18n } from "../../../i18n/I18nProvider";
 import type { TournamentListItem } from "../../../api/schemas/tournaments";
 import { getTournamentStatusMeta } from "../../../utils/tournamentStatus";
+import { AppSurface } from "../../../components/common/AppSurface";
 
 type TournamentCardProps = {
   tournament: TournamentListItem;
@@ -28,19 +29,17 @@ export function TournamentCard({
   const showActions = canEdit || canDelete;
 
   return (
-    <Card
-      withBorder
-      radius="lg"
-      padding="lg"
-      shadow="sm"
+    <AppSurface
+      variant="card"
+      p="lg"
+      interactive
       onClick={() => onOpen(tournament.slug)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
-        cursor: "pointer",
         position: "relative",
         overflow: "hidden",
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       {showActions && (
         <Box
@@ -95,6 +94,6 @@ export function TournamentCard({
       <Text c="dimmed" size="sm" lineClamp={3}>
         {tournament.description || t("common.emptyValue")}
       </Text>
-    </Card>
+    </AppSurface>
   );
 }

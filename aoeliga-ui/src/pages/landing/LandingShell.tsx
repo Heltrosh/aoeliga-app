@@ -46,9 +46,11 @@ function LandingSectionSwitcher({
           gap: 4,
           padding: 4,
           borderRadius: 999,
-          background: "rgba(10, 18, 32, 0.82)",
-          border: "1px solid rgba(229, 154, 42, 0.18)",
-          boxShadow: "0 8px 24px rgba(0, 0, 0, 0.18)",
+          background: "rgba(21, 31, 40, 0.64)",
+          border: "1px solid rgba(229,154,42,0.22)",
+          boxShadow:
+            "0 0 0 1px rgba(229,154,42,0.06) inset, 0 8px 24px rgba(0,0,0,0.14)",
+          backdropFilter: "blur(6px)",
         }}
       >
         {items.map((item) => {
@@ -69,24 +71,24 @@ function LandingSectionSwitcher({
               }}
               styles={{
                 root: {
-                    height: 28,
-                    paddingInline: 10,
-                    background: active
-                      ? "rgba(229,154,42,0.10)"
-                      : "transparent",
-                    border: active
-                      ? "1px solid rgba(229,154,42,0.28)"
-                      : "1px solid transparent",
-                    boxShadow: active
-                      ? "0 0 6px rgba(229,154,42,0.15)"
-                      : "none",
-                    color: active
-                      ? "#ffd7a3"
-                      : "rgba(255,255,255,0.9)",
-                      fontWeight: 700,
+                  height: 24,
+                  paddingInline: 10,
+                  background: active
+                    ? "rgba(229,154,42,0.09)"
+                    : "transparent",
+                  border: active
+                    ? "1px solid rgba(229,154,42,0.26)"
+                    : "1px solid transparent",
+                  boxShadow: active
+                    ? "0 0 0 1px rgba(229,154,42,0.08) inset, 0 4px 12px rgba(0,0,0,0.10)"
+                    : "none",
+                  color: active
+                    ? "#ffd7a3"
+                    : "rgba(255,255,255,0.92)",
+                  fontWeight: 700,
                 },
                 label: {
-                    color: "inherit",
+                  color: "inherit",
                 },
               }}
             >
@@ -111,8 +113,12 @@ export function LandingShell({
 
   const items: NavItem[] = [
     { value: "tournaments", label: t("landing.title.tournaments") },
-    ...(canSeeRulesets ? [{ value: "rulesets" as const, label: t("landing.title.rulesets") }] : []),
-    ...(canSeeAdmin ? [{ value: "admin" as const, label: t("landing.title.admin") }] : []),
+    ...(canSeeRulesets
+      ? [{ value: "rulesets" as const, label: t("landing.title.rulesets") }]
+      : []),
+    ...(canSeeAdmin
+      ? [{ value: "admin" as const, label: t("landing.title.admin") }]
+      : []),
   ];
 
   return (

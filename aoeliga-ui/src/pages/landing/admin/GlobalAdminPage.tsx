@@ -22,7 +22,7 @@ function AdminTile({
   onClick: () => void;
 }) {
   return (
-    <AppSurface p="md" interactive onClick={onClick}>
+    <AppSurface variant="card" p="md" interactive onClick={onClick}>
       <Stack gap="sm">
         {icon ? (
           <div
@@ -77,8 +77,8 @@ export default function GlobalAdminPage() {
         <Stack gap="md">
           <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
             <AdminTile
-              title="User moderation"
-              description="Ban or unban users from accessing the app."
+              title={t("landing.admin.users.title")}
+              description={t("landing.admin.users.description")}
               icon={<IconUserOff size={20} />}  
               onClick={() => navigate("/admin/users")}
             />

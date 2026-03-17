@@ -4,7 +4,6 @@ import {
   Anchor,
   Avatar,
   Badge,
-  Card,
   Collapse,
   Group,
   Select,
@@ -174,7 +173,7 @@ export function CurrentUserCard({
   extraLines?: React.ReactNode[];
 }) {
   return (
-    <Card withBorder radius="md" p="sm">
+    <AppSurface variant="card" p="sm">
       <Group justify="space-between" align="flex-start">
         <Group align="flex-start" gap="sm" wrap="nowrap">
           <UserAvatar user={user} />
@@ -207,7 +206,7 @@ export function CurrentUserCard({
           </ActionIcon>
         </Group>
       </Group>
-    </Card>
+    </AppSurface>
   );
 }
 
@@ -238,7 +237,7 @@ export function CollapsibleTile({
   const [opened, setOpened] = useState(defaultOpen);
 
   return (
-    <AppSurface p="lg">
+    <AppSurface variant="card" p="lg">
       <Group
         justify="space-between"
         align="flex-start"

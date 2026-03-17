@@ -6,7 +6,6 @@ import {
   Grid,
   Group,
   NumberInput,
-  Paper,
   Select,
   Stack,
   Text,
@@ -26,6 +25,7 @@ import {
   scoringSystemTypeOptions,
   stageTypeOptions,
 } from "../../pages/landing/rulesets/rulesetEditorForm";
+import { AppSurface } from "../common/AppSurface";
 
 type RulesetGuidedEditorProps = {
   state: GuidedRulesetEditorState;
@@ -53,7 +53,7 @@ export function RulesetGuidedEditor({
 
   return (
     <Stack gap="md" pr="xs">
-      <Paper withBorder radius="md" p="md">
+      <AppSurface p="md">
         <Stack gap="sm">
           <Title order={5}>General</Title>
           <Grid>
@@ -87,9 +87,9 @@ export function RulesetGuidedEditor({
             </Grid.Col>
           </Grid>
         </Stack>
-      </Paper>
+      </AppSurface>
 
-      <Paper withBorder radius="md" p="md">
+      <AppSurface p="md">
         <Stack gap="sm">
           <Group justify="space-between">
             <Title order={5}>Available Match Formats</Title>
@@ -116,7 +116,7 @@ export function RulesetGuidedEditor({
           </Group>
 
           {state.matchFormats.map((format) => (
-            <Paper key={format.localId} withBorder radius="md" p="sm">
+            <AppSurface key={format.localId} p="sm">
               <Grid align="end">
                 <Grid.Col span={{ base: 12, md: 4 }}>
                   <TextInput
@@ -193,12 +193,12 @@ export function RulesetGuidedEditor({
                   </ActionIcon>
                 </Grid.Col>
               </Grid>
-            </Paper>
+            </AppSurface>
           ))}
         </Stack>
-      </Paper>
+      </AppSurface>
 
-      <Paper withBorder radius="md" p="md">
+      <AppSurface p="md">
         <Stack gap="sm">
           <Group justify="space-between">
             <Title order={5}>Scoring Systems</Title>
@@ -227,7 +227,7 @@ export function RulesetGuidedEditor({
           </Group>
 
           {state.scoringSystems.map((system) => (
-            <Paper key={system.localId} withBorder radius="md" p="sm">
+            <AppSurface key={system.localId} p="sm">
               <Stack gap="sm">
                 <Grid align="end">
                   <Grid.Col span={{ base: 12, md: 5 }}>
@@ -517,12 +517,12 @@ export function RulesetGuidedEditor({
                   </Grid>
                 ) : null}
               </Stack>
-            </Paper>
+            </AppSurface>
           ))}
         </Stack>
-      </Paper>
+      </AppSurface>
 
-      <Paper withBorder radius="md" p="md">
+      <AppSurface p="md">
         <Stack gap="sm">
           <Group justify="space-between">
             <Title order={5}>Stages</Title>
@@ -562,7 +562,7 @@ export function RulesetGuidedEditor({
           </Group>
 
           {state.stages.map((stage, stageIndex) => (
-            <Paper key={stage.localId} withBorder radius="md" p="sm">
+            <AppSurface key={stage.localId} p="sm">
               <Stack gap="sm">
                 <Group justify="space-between">
                   <Group gap="xs">
@@ -1026,7 +1026,7 @@ export function RulesetGuidedEditor({
                   </Text>
                 ) : (
                   stage.overrides.map((override) => (
-                    <Paper key={override.localId} withBorder radius="md" p="sm">
+                    <AppSurface key={override.localId} p="sm">
                       <Grid align="end">
                         <Grid.Col span={{ base: 12, md: 4 }}>
                           <TextInput
@@ -1144,14 +1144,14 @@ export function RulesetGuidedEditor({
                           </ActionIcon>
                         </Grid.Col>
                       </Grid>
-                    </Paper>
+                    </AppSurface>
                   ))
                 )}
               </Stack>
-            </Paper>
+            </AppSurface>
           ))}
         </Stack>
-      </Paper>
+      </AppSurface>
     </Stack>
   );
 }

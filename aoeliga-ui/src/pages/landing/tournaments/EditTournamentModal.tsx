@@ -6,9 +6,9 @@ import {
   Button,
   Stack,
   Group,
-  Grid,
   Text,
   Select,
+  Box,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { Controller, useForm } from "react-hook-form";
@@ -171,8 +171,8 @@ export function EditTournamentModal({
               )}
             />
 
-            <Grid align="flex-end">
-              <Grid.Col span={9}>
+            <Group align="flex-end" gap="sm" wrap="nowrap">
+              <Box style={{ flex: 1, minWidth: 0 }}>
                 <Controller
                   control={form.control}
                   name="default_ruleset"
@@ -188,28 +188,26 @@ export function EditTournamentModal({
                     />
                   )}
                 />
-              </Grid.Col>
+              </Box>
 
-              <Grid.Col span={3}>
-                <Button
-                  fullWidth
-                  variant="default"
-                  leftSection={<IconEye size={16}/>}
-                  disabled={
-                    selectedRuleset === "none" ||
-                    selectedRuleset == null ||
-                    rulesetsQuery.isPending
+              <Button
+                variant="default"
+                leftSection={<IconEye size={16} />}
+                disabled={
+                  selectedRuleset === "none" ||
+                  selectedRuleset == null ||
+                  rulesetsQuery.isPending
+                }
+                onClick={() => {
+                  if (selectedRuleset && selectedRuleset !== "none") {
+                    setViewRulesetId(Number(selectedRuleset));
                   }
-                  onClick={() => {
-                    if (selectedRuleset && selectedRuleset !== "none") {
-                      setViewRulesetId(Number(selectedRuleset));
-                    }
-                  }}
-                >
-                  {t("landing.createTournament.fields.ruleset.view")}
-                </Button>
-              </Grid.Col>
-            </Grid>
+                }}
+                style={{ flexShrink: 0 }}
+              >
+                {t("landing.createTournament.fields.ruleset.view")}
+              </Button>
+            </Group>
 
             <Group grow>
               <Controller

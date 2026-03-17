@@ -6,7 +6,6 @@ import {
   Grid,
   Group,
   List,
-  Paper,
   Stack,
   Text,
   ThemeIcon,
@@ -36,6 +35,7 @@ import {
   getScoringSystemEntries,
   getTournamentStructureSummary,
 } from "../../../components/rulesets/rulesetDetailsHelpers";
+import { AppSurface } from "../../../components/common/AppSurface";
 
 function OverviewCard({ config }: { config: RulesetConfig }) {
   const matchFormats = getMatchFormatEntries(config.match_formats);
@@ -43,7 +43,7 @@ function OverviewCard({ config }: { config: RulesetConfig }) {
   const defaultCadence = config.calendar?.round_duration_days;
 
   return (
-    <Paper withBorder radius="md" p="md">
+    <AppSurface p="md">
       <Stack gap="md">
         <div>
           <Text fw={700} size="sm" tt="uppercase" c="dimmed">
@@ -112,7 +112,7 @@ function OverviewCard({ config }: { config: RulesetConfig }) {
           </Grid.Col>
         </Grid>
       </Stack>
-    </Paper>
+    </AppSurface>
   );
 }
 
@@ -157,7 +157,7 @@ function StageSection({
   const participants = formatParticipants(stage, config);
 
   return (
-    <Paper withBorder radius="md" p="md">
+    <AppSurface p="md">
       <Stack gap="md">
         <Group justify="space-between" align="flex-start">
           <div>
@@ -239,7 +239,7 @@ function StageSection({
           </>
         ) : null}
       </Stack>
-    </Paper>
+    </AppSurface>
   );
 }
 
@@ -252,7 +252,7 @@ function UsageCard({
   const divisions = ruleset.usage.divisions ?? [];
 
   return (
-    <Paper withBorder radius="md" p="md">
+    <AppSurface p="md">
       <Stack gap="md">
         <Text fw={700} size="sm" tt="uppercase" c="dimmed">
           Usage
@@ -320,7 +320,7 @@ function UsageCard({
           </Grid.Col>
         </Grid>
       </Stack>
-    </Paper>
+    </AppSurface>
   );
 }
 
@@ -359,13 +359,10 @@ export function AdminRulesetDetailsView({
       <OverviewCard config={ruleset.config} />
       <UsageCard ruleset={ruleset} />
 
-      <Stack gap="md">
-        {ruleset.config.stages.map((stage, index) => (
+      <Stack gap="lg">
+        {ruleset.config.stages.map((stage) => (
           <Fragment key={stage.id}>
             <StageSection stage={stage} config={ruleset.config} />
-            {index < ruleset.config.stages.length - 1 ? (
-              <Divider variant="dashed" />
-            ) : null}
           </Fragment>
         ))}
       </Stack>

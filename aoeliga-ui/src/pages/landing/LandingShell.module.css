@@ -3,9 +3,11 @@
     background 120ms ease,
     border-color 120ms ease,
     box-shadow 120ms ease,
-    color 120ms ease;
+    color 120ms ease,
+    transform 120ms ease;
 }
 
 .switcherButton[data-active="false"]:hover {
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  transform: translateY(-1px);
 }

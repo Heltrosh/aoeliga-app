@@ -8,7 +8,6 @@ import {
   List,
   Loader,
   Modal,
-  Paper,
   Stack,
   Text,
   ThemeIcon,
@@ -32,6 +31,7 @@ import {
   getPrimaryStageFormatsSummary,
   getTournamentStructureSummary,
 } from "./rulesetDetailsHelpers";
+import { AppSurface } from "../common/AppSurface";
 
 type RulesetDetailsModalProps = {
   opened: boolean;
@@ -42,7 +42,7 @@ type RulesetDetailsModalProps = {
 function OverviewCard({ config }: { config: RulesetConfig }) {
 
   return (
-    <Paper withBorder radius="md" p="md">
+    <AppSurface p="md">
         <div>
           <Text fw={700} size="sm" tt="uppercase" c="dimmed">
             Overview
@@ -54,7 +54,7 @@ function OverviewCard({ config }: { config: RulesetConfig }) {
             {getPrimaryStageFormatsSummary(config)}
           </Text>
         </div>
-    </Paper>
+    </AppSurface>
   );
 }
 
@@ -99,7 +99,7 @@ function StageSection({
   const participants = formatParticipants(stage, config);
 
   return (
-    <Paper withBorder radius="md" p="md">
+    <AppSurface p="md">
       <Stack gap="md">
         <Group justify="space-between" align="flex-start">
           <div>
@@ -178,7 +178,7 @@ function StageSection({
           </>
         ) : null}
       </Stack>
-    </Paper>
+    </AppSurface>
   );
 }
 
@@ -226,13 +226,10 @@ export function RulesetDetailsModal({
 
           <OverviewCard config={rulesetQuery.data.config} />
 
-          <Stack gap="md">
-            {rulesetQuery.data.config.stages.map((stage, index) => (
+          <Stack gap="lg">
+            {rulesetQuery.data.config.stages.map((stage) => (
               <Fragment key={stage.id}>
                 <StageSection stage={stage} config={rulesetQuery.data.config} />
-                {index < rulesetQuery.data.config.stages.length - 1 ? (
-                  <Divider variant="dashed" />
-                ) : null}
               </Fragment>
             ))}
           </Stack>
