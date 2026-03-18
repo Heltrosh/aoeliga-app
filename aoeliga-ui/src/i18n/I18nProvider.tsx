@@ -9,10 +9,12 @@ import {
 
 const messages = { en, cs };
 
+type TranslationVars = Record<string, string | number>;
+
 type I18nContextValue = {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, vars?: TranslationVars) => string;
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -24,8 +26,18 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(LOCALE_STORAGE_KEY, locale);
   }, [locale]);
 
-  function t(key: TranslationKey) {
-    return messages[locale][key];
+  function t(key: TranslationKey, vars?: TranslationVars) {
+    let text = messages[locale][key];
+
+    if (!vars) {
+      return text;
+    }
+
+    for (const [name, value] of Object.entries(vars)) {
+      text = text.replaceAll(`{{${name}}}`, String(value));
+    }
+
+    return text;
   }
 
   return (

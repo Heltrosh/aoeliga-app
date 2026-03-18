@@ -168,12 +168,13 @@ export function RulesetEditorModal({
               label="Ruleset name"
               placeholder="Default League Rules"
               value={guidedState.name}
-              onChange={(event) =>
+              onChange={(event) => {
+                const value = event.currentTarget.value;
                 setGuidedState((prev) => ({
                   ...prev,
-                  name: event.currentTarget.value,
-                }))
-              }
+                  name: value,
+                }));
+              }}
               style={{ flex: 1 }}
             />
 

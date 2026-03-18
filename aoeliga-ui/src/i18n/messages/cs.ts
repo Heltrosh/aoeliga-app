@@ -2,7 +2,10 @@ import type { MessagesShape } from "./en";
 
 export const cs = {
   "common.cancel": "Zrušit",
-  "common.emptyValue": "—",  
+  "common.emptyValue": "—", 
+
+  "collapsibletile.collapse": "Sbalit {{title}}",
+  "collapsibletile.expand": "Rozbalit {{title}}",
 
   "header.title": "CZ/SK AoE Liga",
 
@@ -92,15 +95,45 @@ export const cs = {
   "landing.admin.users.ban.reason.title": "Důvod banu",
   "landing.admin.users.ban.reason.placeholder": "Volitelná poznámka viditelná pro adminy",
 
-  "nav.dashboard": "Přehled",
-  "nav.divisions": "Divize",
-  "nav.schedule": "Rozpis",
-  "nav.players": "Hráči",
-  "nav.administration": "Administrace",
+  "tournament.nav.dashboard": "Přehled",
+  "tournament.nav.divisions": "Divize",
+  "tournament.nav.schedule": "Rozpis",
+  "tournament.nav.players": "Hráči",
+  "tournament.nav.administration": "Administrace",
 
   "tournament.dashboard": "Přehled",
   "tournament.loading": "Načítání...",
   "tournament.placeholder": "Ukázkový přehled turnaje.",
+
+  "tournament.admin.noaccess": "Na tuto stránku nemáš přístup.",
+  "tournament.admin.noslug": "Chybí turnajový slug.",
+  "tournament.admin.description": "Spravuj administrátory, streamery a hráče pro {{name}}",
+  "tournament.admin.description.fallback": "tento turnaj",
+
+  "tournament.admin.common.picker": "Vyber uživatele",
+  "tournament.admin.common.nousers":"Žádní uživatelé nenalezeni",
+  "tournament.admin.common.selected": "Vybraný uživatel",
+  "tournament.admin.common.noselected" : "Žádný vybraný uživatel",
+  "tournament.admin.common.remove": "Odebrat {{badge}}a z turnaje",
+  
+  "tournament.admin.staff.title": "Admini & Moderátoři",
+  "tournament.admin.staff.description": "Přiřazuj a odebírej turnajové administrační role",
+  "tournament.admin.staff.addadmin": "Přidat jako admina",
+  "tournament.admin.staff.addmoderator": "Přidat jako moderátora",
+  "tournament.admin.staff.save": "Uložit přiřazení role",
+  "tournament.admin.staff.saveerror": "Nepodařilo se přidat admina/moderátora",
+  "tournament.admin.staff.current": "Aktuální administrátoři",
+  "tournament.admin.staff.nostaff": "Žádní přiřazení administrátoři.",
+  "tournament.admin.staff.admin": "Admin",
+  "tournament.admin.staff.moderator": "Moderátor",
+
+  "tournament.admin.streamer.title": "Streameři",
+  "tournament.admin.streamer.description": "Přiřazuj a odebírej turnajové streamery",
+  "tournament.admin.streamer.addstreamer": "Přidat jako streamera",
+  "tournament.admin.streamer.saveerror": "Nepodařilo se přidat streamera",
+  "tournament.admin.streamer.current": "Aktuální streameři",
+  "tournament.admin.streamer": "Streamer",
+  "tournament.admin.streamer.nostreamers": "Žádní přiřazení streameři.",
 
   "tournament.status.draft": "Návrh",
   "tournament.status.signup": "Registrace",

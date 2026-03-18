@@ -1,6 +1,9 @@
 export const en = {
   "common.cancel": "Cancel",
   "common.emptyValue": "—",
+  
+  "collapsibletile.collapse": "Collapse {{title}}",
+  "collapsibletile.expand": "Expand {{title}}",
 
   "header.title": "CZ/SK AoE Liga", 
   
@@ -91,15 +94,47 @@ export const en = {
   "landing.admin.users.ban.reason.title": "Ban reason",
   "landing.admin.users.ban.reason.placeholder": "Optional note shown to admins",
 
-  "nav.dashboard": "Dashboard",
-  "nav.divisions": "Divisions",
-  "nav.schedule": "Schedule",
-  "nav.players": "Players",
-  "nav.administration": "Administration",
+  "tournament.nav.dashboard": "Dashboard",
+  "tournament.nav.divisions": "Divisions",
+  "tournament.nav.schedule": "Schedule",
+  "tournament.nav.players": "Players",
+  "tournament.nav.administration": "Administration",
 
   "tournament.dashboard": "Dashboard",
   "tournament.loading": "Loading...",
   "tournament.placeholder": "Tournament dashboard placeholder.",
+
+  "tournament.admin.noaccess": "You do not have access to this page.",
+  "tournament.admin.noslug": "Tournament slug is missing.",
+  "tournament.admin.description": "Manage staff and players for {{name}}",
+  "tournament.admin.description.fallback": "this tournament",
+  
+  "tournament.admin.common.picker": "Select user",
+  "tournament.admin.common.nousers":"No users found",
+  "tournament.admin.common.selected": "Selected user",
+  "tournament.admin.common.noselected" : "No user selected",
+  "tournament.admin.common.remove": "Remove {{badge}} from tournament",
+  
+
+  "tournament.admin.staff.title": "Admins & Moderators",
+  "tournament.admin.staff.description": "Assign and remove tournament admin roles",
+  "tournament.admin.staff.addadmin": "Add as admin",
+  "tournament.admin.staff.addmoderator": "Add as moderator",
+  "tournament.admin.staff.save": "Save role assignment",
+  "tournament.admin.staff.saveerror": "Failed to add admin/moderator",
+  "tournament.admin.staff.current": "Current staff",
+  "tournament.admin.staff.nostaff": "No staff assigned yet.",
+  "tournament.admin.staff.admin": "Admin",
+  "tournament.admin.staff.moderator": "Moderator",
+
+  "tournament.admin.streamer.title": "Streamers",
+  "tournament.admin.streamer.description": "Assign and remove tournament streamers",
+  "tournament.admin.streamer.addstreamer": "Add as streamer",
+  "tournament.admin.streamer.saveerror": "Failed to add streamer",
+  "tournament.admin.streamer.current": "Current streamers",
+  "tournament.admin.streamer": "Streamer",
+  "tournament.admin.streamer.nostreamers": "No streamers assigned yet",
+      
 
   "tournament.status.draft": "Draft",
   "tournament.status.signup": "Signup",

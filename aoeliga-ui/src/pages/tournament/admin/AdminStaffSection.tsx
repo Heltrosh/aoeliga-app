@@ -13,6 +13,7 @@ import {
 } from "../../../api/tournaments";
 import type { UserListItem } from "../../../api/users";
 import { CollapsibleTile, CurrentUserCard, SelectedUserInfo, UserPicker } from "../../../components/tournament-admin/shared";
+import { useI18n } from "../../../i18n/I18nProvider";
 
 const adminSchema = z.object({
   user_id: z.number().int().positive(),
@@ -32,6 +33,7 @@ export function AdminStaffSection({
 }) {
   const queryClient = useQueryClient();
   const [selectedAdminUser, setSelectedAdminUser] = useState<UserListItem | null>(null);
+  const { t } = useI18n();
 
   const adminForm = useForm<AdminFormValues>({
     resolver: zodResolver(adminSchema),
@@ -69,13 +71,13 @@ export function AdminStaffSection({
 
   return (
     <CollapsibleTile
-      title="Admins & Moderators"
-      subtitle="Assign and remove tournament admin roles."
+      title={t("tournament.admin.staff.title")}
+      subtitle={t("tournament.admin.staff.description")}
       defaultOpen
     >
       <Stack gap="md">
         <UserPicker
-          label="Select user"
+          label={t("tournament.admin.common.picker")}
           users={availableUsers}
           value={selectedAdminUser}
           onChange={(user) => {
@@ -89,9 +91,9 @@ export function AdminStaffSection({
 
         <div>
           <Text fw={600} mb={4}>
-            Selected user
+            {t("tournament.admin.common.selected")}
           </Text>
-          <SelectedUserInfo user={selectedAdminUser} />
+          <SelectedUserInfo user={selectedAdminUser} emptyText={t("tournament.admin.common.noselected")} /> 
         </div>
 
         <Group>
@@ -101,7 +103,7 @@ export function AdminStaffSection({
             onClick={() => adminForm.setValue("role", "admin")}
             disabled={!selectedAdminUser || addAdminMutation.isPending}
           >
-            Add as admin
+            {t("tournament.admin.staff.addadmin")}
           </Button>
 
           <Button
@@ -110,7 +112,7 @@ export function AdminStaffSection({
             onClick={() => adminForm.setValue("role", "moderator")}
             disabled={!selectedAdminUser || addAdminMutation.isPending}
           >
-            Add as moderator
+            {t("tournament.admin.staff.addmoderator")}
           </Button>
         </Group>
 
@@ -120,29 +122,38 @@ export function AdminStaffSection({
           loading={addAdminMutation.isPending}
           onClick={adminForm.handleSubmit((values) => addAdminMutation.mutate(values))}
         >
-          Save role assignment
+          {t("tournament.admin.staff.save")}
         </Button>
 
         {addAdminMutation.isError && (
           <Text c="red" size="sm">
-            Failed to add admin/moderator
+            {t("tournament.admin.staff.saveerror")}
           </Text>
         )}
 
         <Divider />
 
-        <Title order={4}>Current staff</Title>
+        <Title order={4}>{t("tournament.admin.staff.current")}</Title>
         <Stack gap="xs">
           {adminMembers.length === 0 ? (
             <Text c="dimmed" size="sm">
-              No staff assigned yet.
+              {t("tournament.admin.staff.nostaff")}
             </Text>
           ) : (
             adminMembers.map((item) => (
               <CurrentUserCard
                 key={`${item.user_id}-${item.role}`}
                 user={item}
-                badge={item.role}
+                badge={
+                  item.role === "admin"
+                    ? t("tournament.admin.staff.admin")
+                    : t("tournament.admin.staff.moderator")
+                }
+                badgeLabel={
+                  item.role === "admin"
+                    ? t("tournament.admin.staff.admin")
+                    : t("tournament.admin.staff.moderator")
+                }
                 badgeColor={item.role === "admin" ? "red" : "blue"}
                 onRemove={() => removeAdminMutation.mutate(item.user_id)}
                 removeLoading={

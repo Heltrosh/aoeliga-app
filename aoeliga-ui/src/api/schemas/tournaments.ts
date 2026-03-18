@@ -96,7 +96,7 @@ export const tournamentStreamerRowSchema = z.object({
   stream_url: z.string().nullable().optional(),
   discord_id: z.string().nullable(),
   discord_name: z.string().nullable(),
-  display_name: z.string().nullable().optional(),
+  display_name: z.string().nullable(),
   avatar: z.string().nullable(),
 });
 

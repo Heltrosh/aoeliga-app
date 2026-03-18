@@ -28,22 +28,22 @@ function useTournamentNavItems(base: string) {
   return useMemo<TournamentNavItem[]>(() => {
     const items: TournamentNavItem[] = [
       {
-        label: t("nav.dashboard"),
+        label: t("tournament.nav.dashboard"),
         to: `${base}/dashboard`,
         icon: <IconLayoutDashboard size={18} />,
       },
       {
-        label: t("nav.divisions"),
+        label: t("tournament.nav.divisions"),
         to: `${base}/divisions`,
         icon: <IconStack2 size={18} />,
       },
       {
-        label: t("nav.schedule"),
+        label: t("tournament.nav.schedule"),
         to: `${base}/schedule`,
         icon: <IconCalendarEvent size={18} />,
       },
       {
-        label: t("nav.players"),
+        label: t("tournament.nav.players"),
         to: `${base}/players`,
         icon: <IconUsers size={18} />,
       },
@@ -51,7 +51,7 @@ function useTournamentNavItems(base: string) {
 
     if (access.canManageTournament || access.isTournamentModerator) {
       items.push({
-        label: t("nav.administration"),
+        label: t("tournament.nav.administration"),
         to: `${base}/admin`,
         icon: <IconSettings size={18} />,
       });

@@ -8,10 +8,12 @@ import { useTournamentAccess } from "../../hooks/useTournamentAccess";
 import { AdminPlayersSection } from "./admin/AdminPlayersSection";
 import { AdminStaffSection } from "./admin/AdminStaffSection";
 import { AdminStreamersSection } from "./admin/AdminStreamersSection";
+import { useI18n } from "../../i18n/I18nProvider";
 
 export default function AdminPage() {
   const { slug } = useParams();
   const { tournament } = useTournament();
+  const { t } = useI18n();
   const access = useTournamentAccess();
   const { users, adminMembers, streamerMembers, playerMembers, isLoading } = useTournamentAdminData(slug);
 
@@ -21,7 +23,7 @@ export default function AdminPage() {
   if (!canSeePage) {
     return (
       <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">
-        You do not have access to this page.
+        {t("tournament.admin.noaccess")}
       </Alert>
     );
   }
@@ -29,7 +31,7 @@ export default function AdminPage() {
   if (!slug) {
     return (
       <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">
-        Tournament slug is missing.
+        {t("tournament.admin.noslug")}
       </Alert>
     );
   }
@@ -37,8 +39,8 @@ export default function AdminPage() {
   return (
     <Stack gap="lg">
       <div>
-        <Title order={2}>Administration</Title>
-        <Text c="dimmed">Manage staff and players for {tournament?.name ?? "this tournament"}.</Text>
+        <Title order={2}>{t("tournament.nav.administration")}</Title>
+        <Text c="dimmed">{t("tournament.admin.description", {name: tournament?.name ?? t("tournament.admin.description.fallback"),})}</Text>
       </div>
 
       {isLoading && <Loader />}

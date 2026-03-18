@@ -80,6 +80,7 @@ export default function LandingPage() {
               variant="filled"
               color="gold"
               onClick={() => setCreateOpen(true)}
+              aria-label={t("landing.createTournament.tooltip")}
             >
               <IconPlus size={18} />
             </ActionIcon>

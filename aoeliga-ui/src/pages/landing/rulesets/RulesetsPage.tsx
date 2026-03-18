@@ -87,9 +87,46 @@ function RulesetCard({
   const actionBlockReason =
     ruleset.lifecycle.lock_reason ?? "This ruleset cannot be changed.";
 
+  const editButton = (
+    <Button
+      variant="light"
+      color="gold"
+      leftSection={<IconPencil size={16} />}
+      disabled={!ruleset.permissions.can_edit}
+      onClick={() => onEdit(ruleset.id)}
+    >
+      Edit
+    </Button>
+  );
+
+  const deleteButton = (
+    <Button
+      variant="light"
+      color="red"
+      leftSection={<IconTrash size={16} />}
+      disabled={!ruleset.permissions.can_delete}
+      onClick={() => onDelete(ruleset)}
+    >
+      Delete
+    </Button>
+  );
+
   return (
-    <AppSurface variant="card" p="md">
-      <Stack gap="md">
+    <AppSurface
+      variant="card"
+      p="md"
+      style={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <Stack
+        gap="md"
+        style={{
+          flex: 1,
+        }}
+      >
         <Group justify="space-between" align="flex-start">
           <div>
             <Title order={4}>{ruleset.name}</Title>
@@ -157,7 +194,12 @@ function RulesetCard({
           ) : null}
         </Stack>
 
-        <Group justify="space-between" mt="xs">
+        <Group
+          justify="space-between"
+          style={{
+            marginTop: "auto",
+          }}
+        >
           <Button
             variant="default"
             leftSection={<IconEye size={16} />}
@@ -167,33 +209,21 @@ function RulesetCard({
           </Button>
 
           <Group gap="xs">
-            <Tooltip label={ruleset.permissions.can_edit ? "Edit ruleset" : actionBlockReason}>
-              <span>
-                <Button
-                  variant="light"
-                  color="gold"
-                  leftSection={<IconPencil size={16} />}
-                  disabled={!ruleset.permissions.can_edit}
-                  onClick={() => onEdit(ruleset.id)}
-                >
-                  Edit
-                </Button>
-              </span>
-            </Tooltip>
+            {ruleset.permissions.can_edit ? (
+              editButton
+            ) : (
+              <Tooltip label={actionBlockReason}>
+                <span>{editButton}</span>
+              </Tooltip>
+            )}
 
-            <Tooltip label={ruleset.permissions.can_delete ? "Delete ruleset" : actionBlockReason}>
-              <span>
-                <Button
-                  variant="light"
-                  color="red"
-                  leftSection={<IconTrash size={16} />}
-                  disabled={!ruleset.permissions.can_delete}
-                  onClick={() => onDelete(ruleset)}
-                >
-                  Delete
-                </Button>
-              </span>
-            </Tooltip>
+            {ruleset.permissions.can_delete ? (
+              deleteButton
+            ) : (
+              <Tooltip label={actionBlockReason}>
+                <span>{deleteButton}</span>
+              </Tooltip>
+            )}
           </Group>
         </Group>
       </Stack>
@@ -297,6 +327,7 @@ export default function RulesetsPage() {
               variant="filled"
               color="gold"
               onClick={() => setCreateOpened(true)}
+              aria-label={t("landing.createRuleset.tooltip")}
             >
               <IconPlus size={18} />
             </ActionIcon>
@@ -323,6 +354,7 @@ export default function RulesetsPage() {
                   </Text>
                   <SegmentedControl
                     fullWidth
+                    radius="xl"
                     value={filter}
                     onChange={(value) => setFilter(value as FilterMode)}
                     data={[
@@ -331,6 +363,27 @@ export default function RulesetsPage() {
                       { label: "In use", value: "in-use" },
                       { label: "Unused", value: "unused" },
                     ]}
+                    styles={{
+                      root: {
+                        background: "rgba(10, 18, 30, 0.28)",
+                        border: "1px solid rgba(255,255,255,0.06)",
+                        boxShadow: "0 0 0 1px rgba(255,255,255,0.03) inset",
+                        padding: 4,
+                      },
+                      indicator: {
+                        background: "rgba(255,255,255,0.10)",
+                        border: "1px solid rgba(255,255,255,0.06)",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.16)",
+                      },
+                      control: {
+                        border: "none",
+                      },
+                      label: {
+                        color: "rgba(255,255,255,0.82)",
+                        fontWeight: 600,
+                        transition: "color 120ms ease, background 120ms ease",
+                      },
+                    }}
                   />
                 </div>
               </Group>

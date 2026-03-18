@@ -21,6 +21,7 @@ import {
 
 import type { UserListItem } from "../../api/users";
 import { AppSurface } from "../common/AppSurface";
+import { useI18n } from "../../i18n/I18nProvider";
 
 type WithNames = {
   id?: number;
@@ -90,6 +91,7 @@ export function UserPicker({
   onChange: (user: UserListItem | null) => void;
   disabled?: boolean;
 }) {
+  const { t } = useI18n();
   const data = useMemo(() => {
     const seen = new Set<string>();
 
@@ -113,10 +115,10 @@ export function UserPicker({
   return (
     <Select
       label={label}
-      placeholder="Select user"
+      placeholder={t("tournament.admin.common.picker")}
       searchable
       clearable
-      nothingFoundMessage="No users found"
+      nothingFoundMessage={t("tournament.admin.common.nousers")}
       data={data}
       value={value ? String(value.id) : null}
       onChange={(selectedValue) => {
@@ -131,7 +133,7 @@ export function UserPicker({
 
 export function SelectedUserInfo({
   user,
-  emptyText = "No user selected",
+  emptyText
 }: {
   user: UserListItem | null;
   emptyText?: string;
@@ -160,18 +162,21 @@ export function SelectedUserInfo({
 export function CurrentUserCard({
   user,
   badge,
+  badgeLabel,
   badgeColor,
   onRemove,
   removeLoading,
   extraLines = [],
 }: {
   user: WithNames;
-  badge: string;
+  badge: React.ReactNode;
+  badgeLabel: string;
   badgeColor: string;
   onRemove: () => void;
   removeLoading?: boolean;
   extraLines?: React.ReactNode[];
 }) {
+  const { t } = useI18n();
   return (
     <AppSurface variant="card" p="sm">
       <Group justify="space-between" align="flex-start">
@@ -200,7 +205,7 @@ export function CurrentUserCard({
             variant="subtle"
             onClick={onRemove}
             loading={removeLoading}
-            aria-label={`Remove ${badge}`}
+            aria-label={t("tournament.admin.common.remove", {badge: badgeLabel})}
           >
             <IconTrash size={16} />
           </ActionIcon>
@@ -235,6 +240,7 @@ export function CollapsibleTile({
   children: React.ReactNode;
 }) {
   const [opened, setOpened] = useState(defaultOpen);
+  const { t } = useI18n();
 
   return (
     <AppSurface variant="card" p="lg">
@@ -251,7 +257,11 @@ export function CollapsibleTile({
           </Text>
         </div>
 
-        <ActionIcon variant="subtle" color="gold" aria-label={opened ? "Collapse" : "Expand"}>
+        <ActionIcon variant="subtle" color="gold" aria-label={
+          opened 
+            ? t("collapsibletile.collapse", {title: title})
+            : t("collapsibletile.expand", {title: title})
+          }>
           {opened ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
         </ActionIcon>
       </Group>
