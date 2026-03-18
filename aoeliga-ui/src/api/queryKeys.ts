@@ -5,6 +5,8 @@ export const tournamentKeys = {
   admins: (slug: string) => ["tournaments", slug, "admins"] as const,
   streamers: (slug: string) => ["tournaments", slug, "streamers"] as const,
   players: (slug: string) => ["tournaments", slug, "players"] as const,
+  registrationMe: (slug: string) => ["tournaments", slug, "registration", "me"] as const,
+  registrations: (slug: string) => ["tournaments", slug, "registrations"] as const,
 };
 
 export const userKeys = {

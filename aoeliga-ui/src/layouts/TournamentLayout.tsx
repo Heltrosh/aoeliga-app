@@ -6,6 +6,7 @@ import {
   IconCalendarEvent,
   IconUsers,
   IconSettings,
+  IconUserPlus,
 } from "@tabler/icons-react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -24,6 +25,7 @@ type TournamentNavItem = {
 function useTournamentNavItems(base: string) {
   const { t } = useI18n();
   const access = useTournamentAccess();
+  const { tournament, viewer } = useTournament();
 
   return useMemo<TournamentNavItem[]>(() => {
     const items: TournamentNavItem[] = [
@@ -49,6 +51,22 @@ function useTournamentNavItems(base: string) {
       },
     ];
 
+    const showSignup =
+      !!viewer?.is_authenticated &&
+      (
+        (tournament?.status === "signup" && (tournament?.registrations_open ?? 0) === 1) ||
+        ((access.isTournamentAdmin || access.isTournamentModerator) &&
+          (tournament?.status === "draft" || tournament?.status === "signup"))
+      );
+
+    if (showSignup) {
+      items.push({
+        label: "Signup",
+        to: `${base}/signup`,
+        icon: <IconUserPlus size={18} />,
+      });
+    }
+
     if (access.canManageTournament || access.isTournamentModerator) {
       items.push({
         label: t("tournament.nav.administration"),
@@ -58,7 +76,16 @@ function useTournamentNavItems(base: string) {
     }
 
     return items;
-  }, [access.canManageTournament, access.isTournamentModerator, base, t]);
+  }, [
+    access.canManageTournament,
+    access.isTournamentAdmin,
+    access.isTournamentModerator,
+    base,
+    t,
+    tournament?.registrations_open,
+    tournament?.status,
+    viewer?.is_authenticated,
+  ]);
 }
 
 function isNavItemActive(pathname: string, itemTo: string) {

@@ -17,15 +17,17 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS tournaments (
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  slug            TEXT NOT NULL UNIQUE,
-  name            TEXT NOT NULL,
-  description     TEXT,
-  status          TEXT NOT NULL DEFAULT 'draft', -- draft|signup|active|completed|archived
-  default_ruleset INTEGER,
-  starts_at       TEXT,
-  ends_at         TEXT,
-  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug                TEXT NOT NULL UNIQUE,
+  name                TEXT NOT NULL,
+  description         TEXT,
+  status              TEXT NOT NULL DEFAULT 'draft', -- draft|signup|active|completed|archived
+  registrations_open  INTEGER NOT NULL DEFAULT 0,
+  default_ruleset     INTEGER,
+  recent_games_days   INTEGER,
+  starts_at           TEXT,
+  ends_at             TEXT,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
 
   FOREIGN KEY (default_ruleset) REFERENCES rulesets(id) ON DELETE SET NULL,
 
@@ -59,6 +61,7 @@ CREATE TABLE IF NOT EXISTS tournament_registrations (
   tournament_id             INTEGER NOT NULL,
   user_id                   INTEGER NOT NULL,
   aoe_id                    TEXT NOT NULL,
+  aoe_name                  TEXT,
   signup_rating             INTEGER,
   signup_max_rating         INTEGER,
   signup_team_rating        INTEGER,
@@ -67,11 +70,15 @@ CREATE TABLE IF NOT EXISTS tournament_registrations (
   current_max_rating        INTEGER,
   current_team_rating       INTEGER,
   current_max_team_rating   INTEGER,
-  current_rating_fetched_at TEXT,
+  total_games               INTEGER,
+  recent_games              INTEGER,
+  current_data_fetched_at   TEXT,
   status                    TEXT NOT NULL DEFAULT 'pending', -- pending|approved|rejected|withdrawn
   submitted_at              TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at                TEXT NOT NULL DEFAULT (datetime('now')),
   reviewed_at               TEXT,
   reviewed_by               INTEGER,
+  review_note               TEXT,
   note                      TEXT,
 
   FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,

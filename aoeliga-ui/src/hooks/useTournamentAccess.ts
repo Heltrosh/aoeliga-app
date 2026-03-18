@@ -22,6 +22,7 @@ export function useTournamentAccess() {
     isTournamentPlayer: isTournamentPlayer(viewer),
     canManageTournament: capabilities?.can_manage_tournament ?? false,
     canManagePlayers: capabilities?.can_manage_players ?? false,
+    canReviewRegistrations: capabilities?.can_manage_players ?? false,
     canAssignAdmins: capabilities?.can_assign_admins ?? false,
     canAssignStreamers: capabilities?.can_assign_streamers ?? false,
     canManageMatches: capabilities?.can_manage_matches ?? false,

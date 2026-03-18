@@ -7,6 +7,13 @@ import {
   tournamentContextResponseSchema,
   tournamentPlayersResponseSchema,
   tournamentStreamersResponseSchema,
+  tournamentRegistrationSelfResponseSchema,
+  createTournamentRegistrationInputSchema,
+  staffTournamentRegistrationsResponseSchema,
+  reviewTournamentRegistrationInputSchema,
+  createStaffTournamentRegistrationInputSchema,
+  registrationSettingsInputSchema,
+  registrationSettingsResponseSchema,
   type TournamentAdminRow,
   type ListTournamentsResponse,
   type CreateTournamentInput,
@@ -14,6 +21,12 @@ import {
   type TournamentContextResponse,
   type TournamentPlayerRow,
   type TournamentStreamerRow,
+  type TournamentRegistrationSelfResponse,
+  type CreateTournamentRegistrationInput,
+  type StaffTournamentRegistrationsResponse,
+  type ReviewTournamentRegistrationInput,
+  type CreateStaffTournamentRegistrationInput,
+  type RegistrationSettingsInput,
 } from "./schemas/tournaments";
 
 export async function listTournaments(): Promise<ListTournamentsResponse> {
@@ -92,4 +105,83 @@ export function addTournamentPlayer(
 
 export function removeTournamentPlayer(slug: string, playerId: number) {
   return api.delete(`/api/tournaments/${slug}/players/${playerId}`);
+}
+
+export async function getMyTournamentRegistration(
+  slug: string,
+): Promise<TournamentRegistrationSelfResponse> {
+  const json = await api.get(`/api/tournaments/${slug}/registration/me`);
+  return tournamentRegistrationSelfResponseSchema.parse(json);
+}
+
+export async function createMyTournamentRegistration(
+  slug: string,
+  input: CreateTournamentRegistrationInput,
+): Promise<TournamentRegistrationSelfResponse> {
+  const payload = createTournamentRegistrationInputSchema.parse(input);
+  const json = await api.post(`/api/tournaments/${slug}/registration/me`, payload);
+  return tournamentRegistrationSelfResponseSchema.parse(json);
+}
+
+export async function updateMyTournamentRegistration(
+  slug: string,
+  input: CreateTournamentRegistrationInput,
+): Promise<TournamentRegistrationSelfResponse> {
+  const payload = createTournamentRegistrationInputSchema.parse(input);
+  const json = await api.put(`/api/tournaments/${slug}/registration/me`, payload);
+  return tournamentRegistrationSelfResponseSchema.parse(json);
+}
+
+export async function withdrawMyTournamentRegistration(
+  slug: string,
+): Promise<TournamentRegistrationSelfResponse> {
+  const json = await api.post(`/api/tournaments/${slug}/registration/me/withdraw`, {});
+  return tournamentRegistrationSelfResponseSchema.parse(json);
+}
+
+export async function getTournamentRegistrations(
+  slug: string,
+): Promise<StaffTournamentRegistrationsResponse> {
+  const json = await api.get(`/api/tournaments/${slug}/registrations`);
+  return staffTournamentRegistrationsResponseSchema.parse(json);
+}
+
+export async function reviewTournamentRegistration(
+  slug: string,
+  userId: number,
+  input: ReviewTournamentRegistrationInput,
+) {
+  const payload = reviewTournamentRegistrationInputSchema.parse(input);
+  return api.post(`/api/tournaments/${slug}/registrations/${userId}/review`, payload);
+}
+
+export async function refreshTournamentRegistration(
+  slug: string,
+  userId: number,
+) {
+  return api.post(`/api/tournaments/${slug}/registrations/${userId}/refresh`, {});
+}
+
+export async function refreshAllTournamentRegistrations(
+  slug: string,
+): Promise<StaffTournamentRegistrationsResponse> {
+  const json = await api.post(`/api/tournaments/${slug}/registrations/refresh`, {});
+  return staffTournamentRegistrationsResponseSchema.parse(json);
+}
+
+export async function createTournamentRegistrationForUser(
+  slug: string,
+  input: CreateStaffTournamentRegistrationInput,
+) {
+  const payload = createStaffTournamentRegistrationInputSchema.parse(input);
+  return api.post(`/api/tournaments/${slug}/registrations`, payload);
+}
+
+export async function updateTournamentRegistrationSettings(
+  slug: string,
+  input: RegistrationSettingsInput,
+) {
+  const payload = registrationSettingsInputSchema.parse(input);
+  const json = await api.put(`/api/tournaments/${slug}/registration-settings`, payload);
+  return registrationSettingsResponseSchema.parse(json);
 }

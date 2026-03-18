@@ -6,9 +6,12 @@ export type TournamentRow = {
   name: string;
   description: string | null;
   status: TournamentStatus;
+  default_ruleset: number | null;
   starts_at: string | null;
   ends_at: string | null;
   created_at: string;
+  registrations_open: number;
+  recent_games_days: number | null;
 };
 
 export type TournamentAdminRow = {

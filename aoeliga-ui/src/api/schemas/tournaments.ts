@@ -31,6 +31,8 @@ export const tournamentSchema = z.object({
   starts_at: z.string().nullable(),
   ends_at: z.string().nullable(),
   created_at: z.string().optional(),
+  registrations_open: z.number().optional().default(0),
+  recent_games_days: z.number().nullable().optional().default(null),
 });
 
 export const tournamentListCapabilitiesSchema = z.object({
@@ -47,6 +49,8 @@ export const tournamentListItemSchema = z.object({
   default_ruleset: z.number().nullable(),
   starts_at: z.string().nullable(),
   ends_at: z.string().nullable(),
+  registrations_open: z.number().optional().default(0),
+  recent_games_days: z.number().nullable().optional().default(null),
   capabilities: tournamentListCapabilitiesSchema,
 });
 
@@ -121,6 +125,106 @@ export const tournamentPlayersResponseSchema = z.object({
   players: z.array(tournamentPlayerRowSchema),
 });
 
+/* registrations */
+
+export const tournamentRegistrationStatusSchema = z.enum([
+  "pending",
+  "approved",
+  "rejected",
+  "withdrawn",
+]);
+
+export const tournamentRegistrationSelfCapabilitiesSchema = z.object({
+  can_create: z.boolean(),
+  can_edit: z.boolean(),
+  can_withdraw: z.boolean(),
+});
+
+export const tournamentRegistrationSelfSchema = z.object({
+  id: z.number(),
+  tournament_id: z.number(),
+  user_id: z.number(),
+  aoe_id: z.string(),
+  aoe_name: z.string(),
+  status: tournamentRegistrationStatusSchema,
+  submitted_at: z.string(),
+  updated_at: z.string(),
+  note: z.string().nullable(),
+});
+
+export const tournamentRegistrationSelfResponseSchema = z.object({
+  registration: tournamentRegistrationSelfSchema.nullable(),
+  capabilities: tournamentRegistrationSelfCapabilitiesSchema,
+});
+
+export const createTournamentRegistrationInputSchema = z.object({
+  aoe2insights_url: z.string().min(1, "AoE2Insights URL is required"),
+  note: z.string().nullable(),
+});
+
+export const staffTournamentRegistrationUserSchema = z.object({
+  id: z.number(),
+  discord_id: z.string().nullable(),
+  discord_name: z.string().nullable(),
+  display_name: z.string().nullable(),
+  avatar: z.string().nullable(),
+});
+
+export const staffTournamentRegistrationSchema = z.object({
+  id: z.number(),
+  tournament_id: z.number(),
+  user_id: z.number(),
+  aoe_id: z.string(),
+  aoe_name: z.string(),
+  signup_rating: z.number().nullable(),
+  signup_max_rating: z.number().nullable(),
+  signup_team_rating: z.number().nullable(),
+  signup_max_team_rating: z.number().nullable(),
+  current_rating: z.number().nullable(),
+  current_max_rating: z.number().nullable(),
+  current_team_rating: z.number().nullable(),
+  current_max_team_rating: z.number().nullable(),
+  current_data_fetched_at: z.string().nullable(),
+  total_games: z.number().nullable(),
+  recent_games: z.number().nullable(),
+  status: tournamentRegistrationStatusSchema,
+  submitted_at: z.string(),
+  updated_at: z.string(),
+  reviewed_at: z.string().nullable(),
+  reviewed_by: z.number().nullable(),
+  note: z.string().nullable(),
+  review_note: z.string().nullable(),
+  user: staffTournamentRegistrationUserSchema,
+});
+
+export const staffTournamentRegistrationsResponseSchema = z.object({
+  registrations: z.array(staffTournamentRegistrationSchema),
+});
+
+export const reviewTournamentRegistrationInputSchema = z.object({
+  status: z.enum(["pending", "approved", "rejected"]),
+  review_note: z.string().nullable().optional(),
+});
+
+export const createStaffTournamentRegistrationInputSchema = z.object({
+  user_id: z.number(),
+  aoe2insights_url: z.string().min(1),
+  note: z.string().nullable(),
+});
+
+export const registrationSettingsInputSchema = z.object({
+  registrations_open: z.boolean(),
+  recent_games_days: z.number().int().positive().nullable().optional(),
+});
+
+export const registrationSettingsResponseSchema = z.object({
+  ok: z.boolean(),
+  registration_settings: z.object({
+    registrations_open: z.boolean(),
+    recent_games_days: z.number().nullable(),
+  }),
+});
+
 export type TournamentRole = z.infer<typeof tournamentRoleSchema>;
 export type TournamentViewer = z.infer<typeof tournamentViewerSchema>;
 export type TournamentCapabilities = z.infer<typeof tournamentCapabilitiesSchema>;
@@ -133,3 +237,12 @@ export type TournamentContextResponse = z.infer<typeof tournamentContextResponse
 export type TournamentAdminRow = z.infer<typeof tournamentAdminRowSchema>;
 export type TournamentStreamerRow = z.infer<typeof tournamentStreamerRowSchema>;
 export type TournamentPlayerRow = z.infer<typeof tournamentPlayerRowSchema>;
+
+export type TournamentRegistrationSelf = z.infer<typeof tournamentRegistrationSelfSchema>;
+export type TournamentRegistrationSelfResponse = z.infer<typeof tournamentRegistrationSelfResponseSchema>;
+export type CreateTournamentRegistrationInput = z.infer<typeof createTournamentRegistrationInputSchema>;
+export type StaffTournamentRegistration = z.infer<typeof staffTournamentRegistrationSchema>;
+export type StaffTournamentRegistrationsResponse = z.infer<typeof staffTournamentRegistrationsResponseSchema>;
+export type ReviewTournamentRegistrationInput = z.infer<typeof reviewTournamentRegistrationInputSchema>;
+export type CreateStaffTournamentRegistrationInput = z.infer<typeof createStaffTournamentRegistrationInputSchema>;
+export type RegistrationSettingsInput = z.infer<typeof registrationSettingsInputSchema>;
