@@ -8,6 +8,7 @@ type CompanionLeaderboard = {
 };
 
 type CompanionProfileResponse = {
+  name?: string | null;
   leaderboards?: CompanionLeaderboard[];
 };
 
@@ -37,8 +38,8 @@ export type RegistrationSnapshot = {
   recentGames: number;
 };
 
-const AOE2_INSIGHTS_URL_RE =
-  /^(?:https?:\/\/)?(?:www\.)?aoe2insights\.com\/user\/(\d+)(?:\/)?(?:[?#].*)?$/i;
+const AOE2_COMPANION_URL_RE =
+  /^(?:https?:\/\/)?(?:www\.)?aoe2companion\.com\/players\/(\d+)(?:\/)?(?:[?#].*)?$/i;
 
 function normalizeNullableNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value)
@@ -52,16 +53,6 @@ function normalizeGames(value: unknown): number {
     : 0;
 }
 
-function decodeHtml(value: string): string {
-  return value
-    .replaceAll("&amp;", "&")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#39;", "'")
-    .trim();
-}
-
 function getLeaderboard(
   leaderboards: CompanionLeaderboard[] | undefined,
   leaderboardId: string,
@@ -69,17 +60,17 @@ function getLeaderboard(
   return leaderboards?.find((entry) => entry.leaderboardId === leaderboardId) ?? null;
 }
 
-export function parseAoe2InsightsUrl(input: string): {
+export function parseAoe2CompanionUrl(input: string): {
   aoeId: string;
   normalizedUrl: string;
 } {
   const trimmed = input.trim();
-  const match = trimmed.match(AOE2_INSIGHTS_URL_RE);
+  const match = trimmed.match(AOE2_COMPANION_URL_RE);
 
   if (!match) {
     httpError(
       400,
-      "Invalid AoE2Insights profile URL. Expected aoe2insights.com/user/<id>",
+      "Invalid AoE2Companion profile URL. Expected aoe2companion.com/players/<id>",
     );
   }
 
@@ -87,33 +78,8 @@ export function parseAoe2InsightsUrl(input: string): {
 
   return {
     aoeId,
-    normalizedUrl: `https://www.aoe2insights.com/user/${aoeId}/`,
+    normalizedUrl: `https://www.aoe2companion.com/profile/${aoeId}`,
   };
-}
-
-async function fetchTextOrThrow(url: string): Promise<string> {
-  let response: Response;
-
-  try {
-    response = await fetch(url, {
-      headers: {
-        "accept": "text/html,application/json;q=0.9,*/*;q=0.8",
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    httpError(500, "Failed to reach external profile service");
-  }
-
-  if (response.status === 404) {
-    httpError(400, "AoE2Insights profile was not found");
-  }
-
-  if (!response.ok) {
-    httpError(500, "Failed to fetch external profile data");
-  }
-
-  return await response.text();
 }
 
 async function fetchJsonOrThrow<T>(url: string): Promise<T> {
@@ -123,11 +89,16 @@ async function fetchJsonOrThrow<T>(url: string): Promise<T> {
     response = await fetch(url, {
       headers: {
         accept: "application/json",
+        "user-agent": "AoELiga/1.0", 
       },
     });
   } catch (error) {
     console.error(error);
     httpError(500, "Failed to reach external profile service");
+  }
+
+  if (response.status === 404) {
+    httpError(400, "AoE2Companion profile was not found");
   }
 
   if (!response.ok) {
@@ -137,80 +108,43 @@ async function fetchJsonOrThrow<T>(url: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-function extractInsightsName(html: string): string {
-  const match = html.match(
-    /<h1 class="name">\s*<a[^>]*>([^<]+)<\/a>\s*<\/h1>/i,
-  );
-
-  if (!match?.[1]) {
-    httpError(500, "Failed to parse player name from AoE2Insights");
-  }
-
-  return decodeHtml(match[1]);
-}
-
-function extractRelicProfileId(html: string): string {
-  const match = html.match(/\/user\/relic\/(\d+)\/?/i);
-
-  if (!match?.[1]) {
-    httpError(500, "Failed to parse Relic profile id from AoE2Insights");
-  }
-
-  return match[1];
-}
-
 async function countRecentRm1v1Games(
-  relicProfileId: string,
+  companionProfileId: string,
   recentGamesDays: number,
 ): Promise<number> {
   const cutoffMs = Date.now() - recentGamesDays * 24 * 60 * 60 * 1000;
+
   let count = 0;
   let page = 1;
 
   while (true) {
     const url = new URL("https://data.aoe2companion.com/api/matches");
-    url.searchParams.set("profile_ids", relicProfileId);
+    url.searchParams.set("profile_ids", companionProfileId);
     url.searchParams.set("leaderboard_ids", "rm_1v1");
     url.searchParams.set("page", String(page));
 
     const payload = await fetchJsonOrThrow<CompanionMatchesResponse>(url.toString());
     const matches = payload.matches ?? [];
 
-    if (matches.length === 0) {
-      break;
-    }
+    if (matches.length === 0) break;
 
-    let reachedOlderMatches = false;
+    let hasRecentMatch = false;
 
     for (const match of matches) {
-      if (!match.started) {
-        continue;
-      }
+      if (!match.started) continue;
 
       const startedMs = Date.parse(match.started);
-      if (Number.isNaN(startedMs)) {
-        continue;
-      }
+      if (Number.isNaN(startedMs)) continue;
 
       if (startedMs >= cutoffMs) {
-        count += 1;
-      } else {
-        reachedOlderMatches = true;
+        count++;
+        hasRecentMatch = true;
       }
     }
 
-    if (reachedOlderMatches) {
-      break;
-    }
+    if (!hasRecentMatch) break;
 
-    const perPage = payload.perPage ?? matches.length;
-    const total = payload.total ?? matches.length;
-
-    if (page * perPage >= total) {
-      break;
-    }
-
-    page += 1;
+    page++;
   }
 
   return count;
@@ -224,20 +158,21 @@ export async function fetchRegistrationSnapshot(
     httpError(400, "recent_games_days must be a positive integer");
   }
 
-  const { aoeId, normalizedUrl } = parseAoe2InsightsUrl(submittedUrl);
-
-  const insightsHtml = await fetchTextOrThrow(normalizedUrl);
-  const aoeName = extractInsightsName(insightsHtml);
-  const relicProfileId = extractRelicProfileId(insightsHtml);
+  const { aoeId } = parseAoe2CompanionUrl(submittedUrl);
 
   const companionProfile = await fetchJsonOrThrow<CompanionProfileResponse>(
-    `https://data.aoe2companion.com/api/profiles/${relicProfileId}`,
+    `https://data.aoe2companion.com/api/profiles/${aoeId}`,
   );
+
+  const aoeName = companionProfile.name?.trim();
+  if (!aoeName) {
+    httpError(500, "Failed to parse player name from AoE2Companion");
+  }
 
   const rm1v1 = getLeaderboard(companionProfile.leaderboards, "rm_1v1");
   const rmTeam = getLeaderboard(companionProfile.leaderboards, "rm_team");
 
-  const recentGames = await countRecentRm1v1Games(relicProfileId, recentGamesDays);
+  const recentGames = await countRecentRm1v1Games(aoeId, recentGamesDays);
 
   return {
     aoeId,

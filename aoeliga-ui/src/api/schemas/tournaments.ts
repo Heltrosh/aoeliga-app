@@ -158,7 +158,7 @@ export const tournamentRegistrationSelfResponseSchema = z.object({
 });
 
 export const createTournamentRegistrationInputSchema = z.object({
-  aoe2insights_url: z.string().min(1, "AoE2Insights URL is required"),
+  aoe2companion_url: z.string().min(1, "AoE2Companion URL is required"),
   note: z.string().nullable(),
 });
 
@@ -208,7 +208,7 @@ export const reviewTournamentRegistrationInputSchema = z.object({
 
 export const createStaffTournamentRegistrationInputSchema = z.object({
   user_id: z.number(),
-  aoe2insights_url: z.string().min(1),
+  aoe2companion_url: z.string().min(1),
   note: z.string().nullable(),
 });
 

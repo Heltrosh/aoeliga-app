@@ -569,13 +569,13 @@ tournaments.get('/:slug/registration/me', requireUser, withTournamentBySlug, wit
 tournaments.post('/:slug/registration/me', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('player.register'), async (c) => {
   const tournament = c.get('tournament')!;
   const user = c.get('user')!;
-  const body = await c.req.json<{ aoe2insights_url?: string; note?: string | null }>();
+  const body = await c.req.json<{ aoe2companion_url?: string; note?: string | null }>();
 
   assertRegistrationsAvailableForRead(tournament);
   assertSelfRegistrationWindow(tournament);
 
-  if (!body.aoe2insights_url?.trim()) {
-    httpError(400, 'aoe2insights_url is required');
+  if (!body.aoe2companion_url?.trim()) {
+    httpError(400, 'aoe2companion_url is required');
   }
 
   const existing = await getRegistrationByUserId(c, tournament.id, user.id);
@@ -585,7 +585,7 @@ tournaments.post('/:slug/registration/me', requireUser, withTournamentBySlug, wi
   }
 
   const snapshot = await fetchRegistrationSnapshot(
-    body.aoe2insights_url,
+    body.aoe2companion_url,
     tournament.recent_games_days as number,
   );
 
@@ -691,13 +691,13 @@ tournaments.post('/:slug/registration/me', requireUser, withTournamentBySlug, wi
 tournaments.put('/:slug/registration/me', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('player.register'), async (c) => {
   const tournament = c.get('tournament')!;
   const user = c.get('user')!;
-  const body = await c.req.json<{ aoe2insights_url?: string; note?: string | null }>();
+  const body = await c.req.json<{ aoe2companion_url?: string; note?: string | null }>();
 
   assertRegistrationsAvailableForRead(tournament);
   assertSelfRegistrationWindow(tournament);
 
-  if (!body.aoe2insights_url?.trim()) {
-    httpError(400, 'aoe2insights_url is required');
+  if (!body.aoe2companion_url?.trim()) {
+    httpError(400, 'aoe2companion_url is required');
   }
 
   const existing = await getRegistrationByUserId(c, tournament.id, user.id);
@@ -710,7 +710,7 @@ tournaments.put('/:slug/registration/me', requireUser, withTournamentBySlug, wit
   }
 
   const snapshot = await fetchRegistrationSnapshot(
-    body.aoe2insights_url,
+    body.aoe2companion_url,
     tournament.recent_games_days as number,
   );
 
@@ -830,7 +830,7 @@ tournaments.get('/:slug/registrations', requireUser, withTournamentBySlug, withT
 
 tournaments.post('/:slug/registrations', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('player.manage'), async (c) => {
   const tournament = c.get('tournament')!;
-  const body = await c.req.json<{ user_id?: number; aoe2insights_url?: string; note?: string | null }>();
+  const body = await c.req.json<{ user_id?: number; aoe2companion_url?: string; note?: string | null }>();
 
   assertRegistrationsAvailableForRead(tournament);
   assertAdminCreateWindow(tournament);
@@ -839,12 +839,12 @@ tournaments.post('/:slug/registrations', requireUser, withTournamentBySlug, with
     httpError(400, 'user_id is required');
   }
 
-  if (!body.aoe2insights_url?.trim()) {
-    httpError(400, 'aoe2insights_url is required');
+  if (!body.aoe2companion_url?.trim()) {
+    httpError(400, 'aoe2companion_url is required');
   }
 
   const snapshot = await fetchRegistrationSnapshot(
-    body.aoe2insights_url,
+    body.aoe2companion_url,
     tournament.recent_games_days as number,
   );
 
@@ -987,7 +987,7 @@ tournaments.post('/:slug/registrations/refresh', requireUser, withTournamentBySl
 
   for (const registration of registrations) {
     const snapshot = await fetchRegistrationSnapshot(
-      `https://www.aoe2insights.com/user/${registration.aoe_id}/`,
+      `https://www.aoe2companion.com/players/${registration.aoe_id}`,
       tournament.recent_games_days as number,
     );
 
@@ -1059,7 +1059,7 @@ tournaments.post('/:slug/registrations/:userId/refresh', requireUser, withTourna
   }
 
   const snapshot = await fetchRegistrationSnapshot(
-    `https://www.aoe2insights.com/user/${existing.aoe_id}/`,
+    `https://www.aoe2companion.com/players/${existing.aoe_id}`,
     tournament.recent_games_days as number,
   );
 
