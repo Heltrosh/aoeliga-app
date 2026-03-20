@@ -1,9 +1,7 @@
 import { Text, Title } from "@mantine/core";
-import { useTournament } from "../../hooks/useTournament";
 import { useI18n } from "../../i18n/I18nProvider";
 
 export default function DashboardPage() {
-  const { tournament } = useTournament();
   const { t } = useI18n();
 
 

@@ -130,6 +130,7 @@ export function AdminPlayersSection({
                 key={item.id}
                 user={item}
                 badge={item.status}
+                badgeLabel={item.status}
                 badgeColor="green"
                 extraLines={[<AoE2InsightsLink key="aoe2insights" aoeId={item.aoe_id} />]}
                 onRemove={() => removePlayerMutation.mutate(item.id)}

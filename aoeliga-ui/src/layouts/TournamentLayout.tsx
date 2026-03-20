@@ -51,12 +51,14 @@ function useTournamentNavItems(base: string) {
       },
     ];
 
+    const isSignupStage = tournament?.status === "signup";
+    const isDraftStage = tournament?.status === "draft";
+
     const showSignup =
       !!viewer?.is_authenticated &&
       (
-        (tournament?.status === "signup" && (tournament?.registrations_open ?? 0) === 1) ||
-        ((access.isTournamentAdmin || access.isTournamentModerator) &&
-          (tournament?.status === "draft" || tournament?.status === "signup"))
+        isSignupStage ||
+        (access.canManagePlayers && isDraftStage)
       );
 
     if (showSignup) {
@@ -77,12 +79,11 @@ function useTournamentNavItems(base: string) {
 
     return items;
   }, [
+    access.canManagePlayers,
     access.canManageTournament,
-    access.isTournamentAdmin,
     access.isTournamentModerator,
     base,
     t,
-    tournament?.registrations_open,
     tournament?.status,
     viewer?.is_authenticated,
   ]);
@@ -91,7 +92,6 @@ function useTournamentNavItems(base: string) {
 function isNavItemActive(pathname: string, itemTo: string) {
   return pathname === itemTo || pathname.startsWith(`${itemTo}/`);
 }
-
 
 function TournamentPageLoading() {
   return (
