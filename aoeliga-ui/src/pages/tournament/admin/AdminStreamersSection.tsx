@@ -72,7 +72,7 @@ export function AdminStreamersSection({
       defaultOpen>
       <Stack gap="md">
         <UserPicker
-          label={t("tournament.admin.common.picker")}
+          label={t("userpicker.selectUser")}
           users={availableUsers}
           value={selectedStreamerUser}
           onChange={(user) => {
@@ -86,9 +86,9 @@ export function AdminStreamersSection({
 
         <div>
           <Text fw={600} mb={4}>
-            {t("tournament.admin.common.selected")}
+            {t("userpicker.selected")}
           </Text>
-          <SelectedUserInfo user={selectedStreamerUser} emptyText={t("tournament.admin.common.noselected")} />
+          <SelectedUserInfo user={selectedStreamerUser} emptyText={t("userpicker.noselected")} />
         </div>
 
         <Button

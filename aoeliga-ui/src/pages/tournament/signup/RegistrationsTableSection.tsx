@@ -1,7 +1,5 @@
 import {
-  ActionIcon,
   Alert,
-  Badge,
   Button,
   Group,
   Loader,
@@ -9,47 +7,41 @@ import {
   Stack,
   Table,
   Text,
-  Tooltip,
 } from "@mantine/core";
 import {
-  IconChecklist,
   IconColumns,
-  IconEye,
-  IconRefresh,
+  IconX,
 } from "@tabler/icons-react";
 
 import { CollapsibleTile } from "../../../components/tournament-admin/shared";
 import { useColumnVisibility } from "../../../hooks/useColumnVisibility";
+import { useI18n } from "../../../i18n/I18nProvider";
 import {
   DEFAULT_COLUMNS,
   OPTIONAL_COLUMNS,
   type RegistrationColumnKey,
 } from "./registrationTableConfig";
 import type { SignupPageState } from "./useSignupPageState";
-
-function registrationStatusColor(status: string) {
-  switch (status) {
-    case "approved":
-      return "green";
-    case "rejected":
-      return "red";
-    case "withdrawn":
-      return "gray";
-    default:
-      return "yellow";
-  }
-}
+import {
+  RegistrationTableHeaderCell,
+  NumericFilterPopover,
+  StatusFilterPopover,
+} from "./registrationsTable/RegistrationTableHeaderCell";
+import { RegistrationTableRow } from "./registrationsTable/RegistrationTableRow";
+import { useRegistrationsTable } from "./registrationsTable/useRegistrationsTable";
 
 export function RegistrationsTableSection({
   state,
 }: {
   state: SignupPageState;
 }) {
+  const { t } = useI18n();
+
   const {
     slug,
     registrations,
     registrationsQuery,
-    refreshFeedback,
+    tableFeedback,
     refreshAllMutation,
     refreshOneMutation,
     setDetailsModal,
@@ -61,20 +53,65 @@ export function RegistrationsTableSection({
     DEFAULT_COLUMNS,
   );
 
+  const {
+    sortKey,
+    sortDirection,
+    statusFilter,
+    numericFilters,
+    filteredAndSortedRegistrations,
+    hasAnyFilters,
+    toggleSort,
+    updateNumericFilter,
+    setStatusFilter,
+    clearFilters,
+  } = useRegistrationsTable(registrations);
+
+  const centeredHeaderStyle = { textAlign: "center" as const };
+  const selectedOptionalCount = OPTIONAL_COLUMNS.filter((col) =>
+    visible.includes(col.key),
+  ).length;
+
+  const title = t("tournament.signup.table.title");
+
+  function optionalColumnLabel(key: RegistrationColumnKey) {
+    switch (key) {
+      case "signup_max_rating":
+        return t("tournament.signup.table.columns.signupMax");
+      case "signup_team_rating":
+        return t("tournament.signup.table.columns.signupTeam");
+      case "signup_max_team_rating":
+        return t("tournament.signup.table.columns.signupTeamMax");
+      case "current_max_team_rating":
+        return t("tournament.signup.table.columns.currentTeamMax");
+      default:
+        return key;
+    }
+  }
+
   return (
     <CollapsibleTile
-      title="Registrations"
-      subtitle="Review, refresh and inspect tournament registrations."
+      title={title}
+      subtitle={t("tournament.signup.table.subtitle")}
       defaultOpen
     >
       <Stack gap="md">
+        {tableFeedback ? (
+          <Alert color="green" variant="light">
+            {tableFeedback}
+          </Alert>
+        ) : null}
+
         <Group justify="space-between" align="center">
           <div />
           <Group>
-            <Menu shadow="md">
+            <Menu shadow="md" closeOnItemClick={false}>
               <Menu.Target>
                 <Button size="xs" variant="light" leftSection={<IconColumns size={14} />}>
-                  Columns
+                  {selectedOptionalCount > 0
+                    ? t("tournament.signup.table.columnsButtonCount", {
+                        count: selectedOptionalCount,
+                      })
+                    : t("tournament.signup.table.columnsButton")}
                 </Button>
               </Menu.Target>
 
@@ -85,7 +122,7 @@ export function RegistrationsTableSection({
                     onClick={() => toggle(col.key)}
                     rightSection={visible.includes(col.key) ? "✓" : ""}
                   >
-                    {col.label}
+                    {optionalColumnLabel(col.key)}
                   </Menu.Item>
                 ))}
               </Menu.Dropdown>
@@ -94,172 +131,349 @@ export function RegistrationsTableSection({
             <Button
               size="xs"
               variant="light"
+              disabled={!hasAnyFilters}
+              leftSection={<IconX size={14} />}
+              onClick={clearFilters}
+            >
+              {t("tournament.signup.table.clearFilters")}
+            </Button>
+
+            <Button
+              size="xs"
+              variant="light"
               loading={refreshAllMutation.isPending}
               onClick={() => refreshAllMutation.mutate()}
             >
-              Refresh all
+              {t("tournament.signup.table.refreshAll")}
             </Button>
           </Group>
         </Group>
-
-        {refreshFeedback ? (
-          <Alert color="green" variant="light">
-            {refreshFeedback}
-          </Alert>
-        ) : null}
 
         {registrationsQuery.isPending ? (
           <Loader />
         ) : registrationsQuery.isError ? (
           <Alert color="red" variant="light">
-            Failed to load registrations.
+            {t("tournament.signup.table.loadFailed")}
           </Alert>
         ) : (
-          <Table striped highlightOnHover>
+          <Table
+            striped
+            highlightOnHover
+            styles={{
+              th: {
+                paddingLeft: 4,
+                paddingRight: 4,
+              },
+              td: {
+                paddingLeft: 4,
+                paddingRight: 4,
+              },
+            }}
+          >
             <Table.Thead>
               <Table.Tr>
-                {visible.includes("user") && <Table.Th>User</Table.Th>}
-                {visible.includes("aoe") && <Table.Th>AoE</Table.Th>}
-                {visible.includes("signup_rating") && <Table.Th>Signup</Table.Th>}
-                {visible.includes("signup_max_rating") && <Table.Th>Signup Max</Table.Th>}
-                {visible.includes("signup_team_rating") && <Table.Th>Signup Team</Table.Th>}
-                {visible.includes("signup_max_team_rating") && (
-                  <Table.Th>Signup Team Max</Table.Th>
+                {visible.includes("user") && (
+                  <Table.Th>
+                    <RegistrationTableHeaderCell
+                      label={t("tournament.signup.table.columns.user")}
+                      sortKey="user"
+                      activeSortKey={sortKey}
+                      direction={sortDirection}
+                      onSort={toggleSort}
+                    />
+                  </Table.Th>
                 )}
 
-                {visible.includes("current_rating") && <Table.Th>1v1</Table.Th>}
-                {visible.includes("current_max_rating") && <Table.Th>Max</Table.Th>}
-                {visible.includes("current_team_rating") && <Table.Th>Team</Table.Th>}
-                {visible.includes("current_max_team_rating") && <Table.Th>Team Max</Table.Th>}
+                {visible.includes("aoe") && (
+                  <Table.Th>
+                    <RegistrationTableHeaderCell
+                      label={t("tournament.signup.table.columns.aoe")}
+                      sortKey="aoe"
+                      activeSortKey={sortKey}
+                      direction={sortDirection}
+                      onSort={toggleSort}
+                    />
+                  </Table.Th>
+                )}
 
-                {visible.includes("total_games") && <Table.Th>Games</Table.Th>}
-                {visible.includes("recent_games") && <Table.Th>Recent</Table.Th>}
-                {visible.includes("status") && <Table.Th>Status</Table.Th>}
+                {visible.includes("signup_rating") && (
+                  <Table.Th style={centeredHeaderStyle}>
+                    <RegistrationTableHeaderCell
+                      label={t("tournament.signup.table.columns.signup1v1")}
+                      sortKey="signup_rating"
+                      activeSortKey={sortKey}
+                      direction={sortDirection}
+                      onSort={toggleSort}
+                      centered
+                      filter={
+                        <NumericFilterPopover
+                          label={t("tournament.signup.table.columns.signup1v1")}
+                          range={numericFilters.signup_rating}
+                          onChange={(side, value) =>
+                            updateNumericFilter("signup_rating", side, value)
+                          }
+                        />
+                      }
+                    />
+                  </Table.Th>
+                )}
 
-                <Table.Th>Details</Table.Th>
-                {visible.includes("actions") && <Table.Th>Actions</Table.Th>}
+                {visible.includes("signup_max_rating") && (
+                  <Table.Th style={centeredHeaderStyle}>
+                    <RegistrationTableHeaderCell
+                      label={t("tournament.signup.table.columns.signupMax")}
+                      sortKey="signup_max_rating"
+                      activeSortKey={sortKey}
+                      direction={sortDirection}
+                      onSort={toggleSort}
+                      centered
+                      filter={
+                        <NumericFilterPopover
+                          label={t("tournament.signup.table.columns.signupMax")}
+                          range={numericFilters.signup_max_rating}
+                          onChange={(side, value) =>
+                            updateNumericFilter("signup_max_rating", side, value)
+                          }
+                        />
+                      }
+                    />
+                  </Table.Th>
+                )}
+
+                {visible.includes("signup_team_rating") && (
+                  <Table.Th style={centeredHeaderStyle}>
+                    <RegistrationTableHeaderCell
+                      label={t("tournament.signup.table.columns.signupTeam")}
+                      sortKey="signup_team_rating"
+                      activeSortKey={sortKey}
+                      direction={sortDirection}
+                      onSort={toggleSort}
+                      centered
+                      filter={
+                        <NumericFilterPopover
+                          label={t("tournament.signup.table.columns.signupTeam")}
+                          range={numericFilters.signup_team_rating}
+                          onChange={(side, value) =>
+                            updateNumericFilter("signup_team_rating", side, value)
+                          }
+                        />
+                      }
+                    />
+                  </Table.Th>
+                )}
+
+                {visible.includes("signup_max_team_rating") && (
+                  <Table.Th style={centeredHeaderStyle}>
+                    <RegistrationTableHeaderCell
+                      label={t("tournament.signup.table.columns.signupTeamMax")}
+                      sortKey="signup_max_team_rating"
+                      activeSortKey={sortKey}
+                      direction={sortDirection}
+                      onSort={toggleSort}
+                      centered
+                      filter={
+                        <NumericFilterPopover
+                          label={t("tournament.signup.table.columns.signupTeamMax")}
+                          range={numericFilters.signup_max_team_rating}
+                          onChange={(side, value) =>
+                            updateNumericFilter("signup_max_team_rating", side, value)
+                          }
+                        />
+                      }
+                    />
+                  </Table.Th>
+                )}
+
+                {visible.includes("current_rating") && (
+                  <Table.Th style={centeredHeaderStyle}>
+                    <RegistrationTableHeaderCell
+                      label={t("tournament.signup.table.columns.current1v1")}
+                      sortKey="current_rating"
+                      activeSortKey={sortKey}
+                      direction={sortDirection}
+                      onSort={toggleSort}
+                      centered
+                      filter={
+                        <NumericFilterPopover
+                          label={t("tournament.signup.table.columns.current1v1")}
+                          range={numericFilters.current_rating}
+                          onChange={(side, value) =>
+                            updateNumericFilter("current_rating", side, value)
+                          }
+                        />
+                      }
+                    />
+                  </Table.Th>
+                )}
+
+                {visible.includes("current_max_rating") && (
+                  <Table.Th style={centeredHeaderStyle}>
+                    <RegistrationTableHeaderCell
+                      label={t("tournament.signup.table.columns.currentMax")}
+                      sortKey="current_max_rating"
+                      activeSortKey={sortKey}
+                      direction={sortDirection}
+                      onSort={toggleSort}
+                      centered
+                      filter={
+                        <NumericFilterPopover
+                          label={t("tournament.signup.table.columns.currentMax")}
+                          range={numericFilters.current_max_rating}
+                          onChange={(side, value) =>
+                            updateNumericFilter("current_max_rating", side, value)
+                          }
+                        />
+                      }
+                    />
+                  </Table.Th>
+                )}
+
+                {visible.includes("current_team_rating") && (
+                  <Table.Th style={centeredHeaderStyle}>
+                    <RegistrationTableHeaderCell
+                      label={t("tournament.signup.table.columns.currentTeam")}
+                      sortKey="current_team_rating"
+                      activeSortKey={sortKey}
+                      direction={sortDirection}
+                      onSort={toggleSort}
+                      centered
+                      filter={
+                        <NumericFilterPopover
+                          label={t("tournament.signup.table.columns.currentTeam")}
+                          range={numericFilters.current_team_rating}
+                          onChange={(side, value) =>
+                            updateNumericFilter("current_team_rating", side, value)
+                          }
+                        />
+                      }
+                    />
+                  </Table.Th>
+                )}
+
+                {visible.includes("current_max_team_rating") && (
+                  <Table.Th style={centeredHeaderStyle}>
+                    <RegistrationTableHeaderCell
+                      label={t("tournament.signup.table.columns.currentTeamMax")}
+                      sortKey="current_max_team_rating"
+                      activeSortKey={sortKey}
+                      direction={sortDirection}
+                      onSort={toggleSort}
+                      centered
+                      filter={
+                        <NumericFilterPopover
+                          label={t("tournament.signup.table.columns.currentTeamMax")}
+                          range={numericFilters.current_max_team_rating}
+                          onChange={(side, value) =>
+                            updateNumericFilter("current_max_team_rating", side, value)
+                          }
+                        />
+                      }
+                    />
+                  </Table.Th>
+                )}
+
+                {visible.includes("total_games") && (
+                  <Table.Th style={centeredHeaderStyle}>
+                    <RegistrationTableHeaderCell
+                      label={t("tournament.signup.table.columns.games")}
+                      sortKey="total_games"
+                      activeSortKey={sortKey}
+                      direction={sortDirection}
+                      onSort={toggleSort}
+                      centered
+                      filter={
+                        <NumericFilterPopover
+                          label={t("tournament.signup.table.columns.games")}
+                          range={numericFilters.total_games}
+                          onChange={(side, value) =>
+                            updateNumericFilter("total_games", side, value)
+                          }
+                        />
+                      }
+                    />
+                  </Table.Th>
+                )}
+
+                {visible.includes("recent_games") && (
+                  <Table.Th style={centeredHeaderStyle}>
+                    <RegistrationTableHeaderCell
+                      label={t("tournament.signup.table.columns.recent")}
+                      sortKey="recent_games"
+                      activeSortKey={sortKey}
+                      direction={sortDirection}
+                      onSort={toggleSort}
+                      centered
+                      filter={
+                        <NumericFilterPopover
+                          label={t("tournament.signup.table.columns.recent")}
+                          range={numericFilters.recent_games}
+                          onChange={(side, value) =>
+                            updateNumericFilter("recent_games", side, value)
+                          }
+                        />
+                      }
+                    />
+                  </Table.Th>
+                )}
+
+                {visible.includes("status") && (
+                  <Table.Th style={centeredHeaderStyle}>
+                    <RegistrationTableHeaderCell
+                      label={t("tournament.signup.table.columns.status")}
+                      sortKey="status"
+                      activeSortKey={sortKey}
+                      direction={sortDirection}
+                      onSort={toggleSort}
+                      centered
+                      filter={
+                        <StatusFilterPopover
+                          values={statusFilter}
+                          onChange={setStatusFilter}
+                        />
+                      }
+                    />
+                  </Table.Th>
+                )}
+
+                <Table.Th style={centeredHeaderStyle}>
+                  <Text fw={700} fz="0.92rem" ta="center" lh={1.2}>
+                    {t("tournament.signup.table.columns.details")}
+                  </Text>
+                </Table.Th>
+
+                {visible.includes("actions") && (
+                  <Table.Th>
+                    <Text fw={700} fz="0.92rem" lh={1.2}>
+                      {t("tournament.signup.table.columns.actions")}
+                    </Text>
+                  </Table.Th>
+                )}
               </Table.Tr>
             </Table.Thead>
 
             <Table.Tbody>
-              {registrations.map((item) => {
-                const isRefreshingThisRow =
-                  refreshOneMutation.isPending &&
-                  refreshOneMutation.variables === item.user_id;
-
-                return (
-                  <Table.Tr key={item.id}>
-                    {visible.includes("user") && (
-                      <Table.Td>
-                        <Text fw={600}>
-                          {item.user.display_name ||
-                            item.user.discord_name ||
-                            `User #${item.user.id}`}
-                        </Text>
-                        <Text size="sm" c="dimmed">
-                          {item.user.discord_name ?? ""}
-                        </Text>
-                      </Table.Td>
-                    )}
-
-                    {visible.includes("aoe") && (
-                      <Table.Td>
-                        <Text fw={600}>{item.aoe_name}</Text>
-                        <Text size="sm" c="dimmed">
-                          {item.aoe_id}
-                        </Text>
-                      </Table.Td>
-                    )}
-
-                    {visible.includes("signup_rating") && (
-                      <Table.Td>{item.signup_rating ?? "—"}</Table.Td>
-                    )}
-                    {visible.includes("signup_max_rating") && (
-                      <Table.Td>{item.signup_max_rating ?? "—"}</Table.Td>
-                    )}
-                    {visible.includes("signup_team_rating") && (
-                      <Table.Td>{item.signup_team_rating ?? "—"}</Table.Td>
-                    )}
-                    {visible.includes("signup_max_team_rating") && (
-                      <Table.Td>{item.signup_max_team_rating ?? "—"}</Table.Td>
-                    )}
-
-                    {visible.includes("current_rating") && (
-                      <Table.Td>{item.current_rating ?? "—"}</Table.Td>
-                    )}
-                    {visible.includes("current_max_rating") && (
-                      <Table.Td>{item.current_max_rating ?? "—"}</Table.Td>
-                    )}
-                    {visible.includes("current_team_rating") && (
-                      <Table.Td>{item.current_team_rating ?? "—"}</Table.Td>
-                    )}
-                    {visible.includes("current_max_team_rating") && (
-                      <Table.Td>{item.current_max_team_rating ?? "—"}</Table.Td>
-                    )}
-
-                    {visible.includes("total_games") && (
-                      <Table.Td>{item.total_games ?? "—"}</Table.Td>
-                    )}
-                    {visible.includes("recent_games") && (
-                      <Table.Td>{item.recent_games ?? "—"}</Table.Td>
-                    )}
-
-                    {visible.includes("status") && (
-                      <Table.Td>
-                        <Badge color={registrationStatusColor(item.status)} variant="light">
-                          {item.status}
-                        </Badge>
-                      </Table.Td>
-                    )}
-
-                    <Table.Td>
-                      <Tooltip label="Details">
-                        <ActionIcon
-                          size="lg"
-                          variant="subtle"
-                          onClick={() => setDetailsModal(item)}
-                        >
-                          <IconEye size={18} />
-                        </ActionIcon>
-                      </Tooltip>
-                    </Table.Td>
-
-                    {visible.includes("actions") && (
-                      <Table.Td>
-                        <Group gap="xs" wrap="nowrap">
-                          <Tooltip label="Review">
-                            <ActionIcon
-                              size="lg"
-                              variant="subtle"
-                              onClick={() => openReview(item)}
-                            >
-                              <IconChecklist size={18} />
-                            </ActionIcon>
-                          </Tooltip>
-
-                          <Tooltip label="Refresh">
-                            <ActionIcon
-                              size="lg"
-                              variant="subtle"
-                              onClick={() => refreshOneMutation.mutate(item.user_id)}
-                              disabled={isRefreshingThisRow}
-                            >
-                              {isRefreshingThisRow ? (
-                                <Loader size={16} />
-                              ) : (
-                                <IconRefresh size={18} />
-                              )}
-                            </ActionIcon>
-                          </Tooltip>
-                        </Group>
-                      </Table.Td>
-                    )}
-                  </Table.Tr>
-                );
-              })}
+              {filteredAndSortedRegistrations.map((item) => (
+                <RegistrationTableRow
+                  key={item.id}
+                  item={item}
+                  visible={visible}
+                  refreshOneMutation={refreshOneMutation}
+                  setDetailsModal={setDetailsModal}
+                  openReview={openReview}
+                />
+              ))}
             </Table.Tbody>
           </Table>
         )}
+
+        {!registrationsQuery.isPending && !registrationsQuery.isError ? (
+          <Text size="sm" c="dimmed">
+            {t("tournament.signup.table.showing", {
+              shown: filteredAndSortedRegistrations.length,
+              total: registrations.length,
+            })}
+          </Text>
+        ) : null}
       </Stack>
     </CollapsibleTile>
   );

@@ -63,7 +63,7 @@ function useTournamentNavItems(base: string) {
 
     if (showSignup) {
       items.push({
-        label: "Signup",
+        label: t("tournament.nav.signup"),
         to: `${base}/signup`,
         icon: <IconUserPlus size={18} />,
       });

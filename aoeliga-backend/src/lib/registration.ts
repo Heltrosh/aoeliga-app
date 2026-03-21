@@ -19,7 +19,7 @@ type CompanionMatch = {
 type CompanionMatchesResponse = {
   page?: number;
   perPage?: number;
-  total?: number;
+  total?: number | null;
   matches?: CompanionMatch[];
 };
 
@@ -40,6 +40,8 @@ export type RegistrationSnapshot = {
 
 const AOE2_COMPANION_URL_RE =
   /^(?:https?:\/\/)?(?:www\.)?aoe2companion\.com\/players\/(\d+)(?:\/)?(?:[?#].*)?$/i;
+
+const COMPANION_USER_AGENT = "AoELiga/1.0 (https://aoeliga.app)";
 
 function normalizeNullableNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value)
@@ -78,7 +80,7 @@ export function parseAoe2CompanionUrl(input: string): {
 
   return {
     aoeId,
-    normalizedUrl: `https://www.aoe2companion.com/profile/${aoeId}`,
+    normalizedUrl: `https://www.aoe2companion.com/players/${aoeId}`,
   };
 }
 
@@ -89,7 +91,7 @@ async function fetchJsonOrThrow<T>(url: string): Promise<T> {
     response = await fetch(url, {
       headers: {
         accept: "application/json",
-        "user-agent": "AoELiga/1.0", 
+        "user-agent": COMPANION_USER_AGENT,
       },
     });
   } catch (error) {
@@ -102,6 +104,8 @@ async function fetchJsonOrThrow<T>(url: string): Promise<T> {
   }
 
   if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    console.error("AoE2Companion error:", response.status, body);
     httpError(500, "Failed to fetch external profile data");
   }
 
@@ -113,7 +117,6 @@ async function countRecentRm1v1Games(
   recentGamesDays: number,
 ): Promise<number> {
   const cutoffMs = Date.now() - recentGamesDays * 24 * 60 * 60 * 1000;
-
   let count = 0;
   let page = 1;
 
@@ -126,25 +129,33 @@ async function countRecentRm1v1Games(
     const payload = await fetchJsonOrThrow<CompanionMatchesResponse>(url.toString());
     const matches = payload.matches ?? [];
 
-    if (matches.length === 0) break;
+    if (matches.length === 0) {
+      break;
+    }
 
     let hasRecentMatch = false;
 
     for (const match of matches) {
-      if (!match.started) continue;
+      if (!match.started) {
+        continue;
+      }
 
       const startedMs = Date.parse(match.started);
-      if (Number.isNaN(startedMs)) continue;
+      if (Number.isNaN(startedMs)) {
+        continue;
+      }
 
       if (startedMs >= cutoffMs) {
-        count++;
+        count += 1;
         hasRecentMatch = true;
       }
     }
 
-    if (!hasRecentMatch) break;
+    if (!hasRecentMatch) {
+      break;
+    }
 
-    page++;
+    page += 1;
   }
 
   return count;

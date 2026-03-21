@@ -157,8 +157,16 @@ export const tournamentRegistrationSelfResponseSchema = z.object({
   capabilities: tournamentRegistrationSelfCapabilitiesSchema,
 });
 
+const aoe2CompanionUrlSchema = z
+  .string()
+  .trim()
+  .regex(
+    /^(?:https?:\/\/)?(?:www\.)?aoe2companion\.com\/players\/\d+(?:\/)?(?:[?#].*)?$/i,
+    "Enter a valid AoE2Companion player URL",
+  );
+
 export const createTournamentRegistrationInputSchema = z.object({
-  aoe2companion_url: z.string().min(1, "AoE2Companion URL is required"),
+  aoe2companion_url: aoe2CompanionUrlSchema,
   note: z.string().nullable(),
 });
 
@@ -208,7 +216,7 @@ export const reviewTournamentRegistrationInputSchema = z.object({
 
 export const createStaffTournamentRegistrationInputSchema = z.object({
   user_id: z.number(),
-  aoe2companion_url: z.string().min(1),
+  aoe2companion_url: aoe2CompanionUrlSchema,
   note: z.string().nullable(),
 });
 

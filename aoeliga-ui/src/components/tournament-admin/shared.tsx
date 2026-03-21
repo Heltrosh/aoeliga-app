@@ -115,10 +115,10 @@ export function UserPicker({
   return (
     <Select
       label={label}
-      placeholder={t("tournament.admin.common.picker")}
+      placeholder={t("userpicker.selectUser")}
       searchable
       clearable
-      nothingFoundMessage={t("tournament.admin.common.nousers")}
+      nothingFoundMessage={t("userpicker.noUsers")}
       data={data}
       value={value ? String(value.id) : null}
       onChange={(selectedValue) => {
@@ -244,12 +244,7 @@ export function CollapsibleTile({
 
   return (
     <AppSurface variant="card" p="lg">
-      <Group
-        justify="space-between"
-        align="flex-start"
-        style={{ cursor: "pointer" }}
-        onClick={() => setOpened((current) => !current)}
-      >
+      <Group justify="space-between" align="flex-start">
         <div>
           <Title order={3}>{title}</Title>
           <Text size="sm" c="dimmed">
@@ -257,11 +252,16 @@ export function CollapsibleTile({
           </Text>
         </div>
 
-        <ActionIcon variant="subtle" color="gold" aria-label={
-          opened 
-            ? t("collapsibletile.collapse", {title: title})
-            : t("collapsibletile.expand", {title: title})
-          }>
+        <ActionIcon
+          variant="subtle"
+          color="gold"
+          onClick={() => setOpened((current) => !current)}
+          aria-label={
+            opened
+              ? t("collapsibletile.collapse", { title: title })
+              : t("collapsibletile.expand", { title: title })
+          }
+        >
           {opened ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
         </ActionIcon>
       </Group>

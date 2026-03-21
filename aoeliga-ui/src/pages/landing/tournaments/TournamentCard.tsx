@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { ActionIcon, Badge, Group, Text, Title, Box } from "@mantine/core";
+import { useEffect, useState, useRef } from "react";
+import { ActionIcon, Badge, Box, Group, Text, Title, Tooltip } from "@mantine/core";
 import { IconEdit, IconTrash } from "@tabler/icons-react";
 
+import { AppSurface } from "../../../components/common/AppSurface";
 import { useI18n } from "../../../i18n/I18nProvider";
 import type { TournamentListItem } from "../../../api/schemas/tournaments";
 import { getTournamentStatusMeta } from "../../../utils/tournamentStatus";
-import { AppSurface } from "../../../components/common/AppSurface";
 
 type TournamentCardProps = {
   tournament: TournamentListItem;
@@ -28,18 +28,59 @@ export function TournamentCard({
   const canDelete = tournament.capabilities.can_delete;
   const showActions = canEdit || canDelete;
 
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const descriptionRef = useRef<HTMLDivElement | null>(null);
+
+  const [isTitleTruncated, setIsTitleTruncated] = useState(false);
+  const [isDescriptionTruncated, setIsDescriptionTruncated] = useState(false);
+
+  useEffect(() => {
+    const titleEl = titleRef.current;
+    const descriptionEl = descriptionRef.current;
+
+    const check = () => {
+      if (titleEl) {
+        setIsTitleTruncated(titleEl.scrollWidth > titleEl.clientWidth);
+      }
+
+      if (descriptionEl) {
+        setIsDescriptionTruncated(descriptionEl.scrollWidth > descriptionEl.clientWidth);
+      }
+    };
+
+    requestAnimationFrame(check);
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(check) : null;
+
+    if (titleEl && resizeObserver) {
+      resizeObserver.observe(titleEl);
+    }
+
+    if (descriptionEl && resizeObserver) {
+      resizeObserver.observe(descriptionEl);
+    }
+
+    window.addEventListener("resize", check);
+
+    return () => {
+      window.removeEventListener("resize", check);
+      resizeObserver?.disconnect();
+    };
+  }, [tournament.name, tournament.description]);
+
   return (
     <AppSurface
       variant="card"
       p="lg"
-      interactive
       onClick={() => onOpen(tournament.slug)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
+        cursor: "pointer",
         position: "relative",
         overflow: "hidden",
       }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       {showActions && (
         <Box
@@ -84,16 +125,48 @@ export function TournamentCard({
         </Box>
       )}
 
-      <Group justify="space-between" mb="xs">
-        <Title order={3}>{tournament.name}</Title>
-        <Badge color={statusMeta.color} variant="light">
+      <Group justify="space-between" align="flex-start" mb="xs" wrap="nowrap">
+        <Box style={{ minWidth: 0, flex: 1 }}>
+          <Tooltip label={tournament.name} disabled={!isTitleTruncated} multiline maw={320}>
+            <Title
+              ref={titleRef}
+              order={3}
+              style={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {tournament.name}
+            </Title>
+          </Tooltip>
+        </Box>
+
+        <Badge color={statusMeta.color} variant="light" style={{ flexShrink: 0 }}>
           {statusMeta.label}
         </Badge>
       </Group>
 
-      <Text c="dimmed" size="sm" lineClamp={3}>
-        {tournament.description || t("common.emptyValue")}
-      </Text>
+      <Tooltip
+        label={tournament.description || t("common.emptyValue")}
+        disabled={!isDescriptionTruncated}
+        multiline
+        maw={360}
+      >
+        <Box
+          ref={descriptionRef}
+          style={{
+            minWidth: 0,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          <Text c="dimmed" size="sm" span>
+            {tournament.description || t("common.emptyValue")}
+          </Text>
+        </Box>
+      </Tooltip>
     </AppSurface>
   );
 }

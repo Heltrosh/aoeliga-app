@@ -54,7 +54,7 @@ export function CreateTournamentModal({
   const selectedRuleset = form.watch("default_ruleset");
 
   const rulesetOptions = useMemo(
-    () => buildRulesetSelectOptions(rulesetsQuery.data ?? [], t("landing.editTournament.fields.ruleset.none")),
+    () => buildRulesetSelectOptions(rulesetsQuery.data ?? [], t("landing.modal.fields.ruleset.none")),
     [rulesetsQuery.data],
   );
 
@@ -129,18 +129,18 @@ export function CreateTournamentModal({
             />
 
             <TextInput
-              label={t("landing.createTournament.fields.name.label")}
-              placeholder={t("landing.createTournament.fields.name.placeholder")}
+              label={t("landing.modal.fields.name.label")}
+              placeholder={t("landing.modal.fields.name.placeholder")}
               required
               {...form.register("name")}
               error={form.formState.errors.name?.message}
             />
 
             <Textarea
-              label={t("landing.createTournament.fields.description.label")}
+              label={t("landing.modal.fields.description.label")}
               minRows={3}
               placeholder={t(
-                "landing.createTournament.fields.description.placeholder",
+                "landing.modal.fields.description.placeholder",
               )}
               {...form.register("description")}
               error={form.formState.errors.description?.message}
@@ -153,7 +153,7 @@ export function CreateTournamentModal({
                   name="default_ruleset"
                   render={({ field }) => (
                     <Select
-                      label={t("landing.createTournament.fields.ruleset.label")}
+                      label={t("landing.modal.fields.ruleset.label")}
                       placeholder="Select ruleset"
                       data={rulesetOptions}
                       value={field.value}
@@ -180,7 +180,7 @@ export function CreateTournamentModal({
                 }}
                 style={{ flexShrink: 0 }}
               >
-                {t("landing.createTournament.fields.ruleset.view")}
+                {t("landing.modal.fields.ruleset.view")}
               </Button>
             </Group>
 
@@ -190,13 +190,13 @@ export function CreateTournamentModal({
                 name="starts_at"
                 render={({ field }) => (
                   <DateInput
-                    label={t("landing.createTournament.fields.startsAt.label")}
+                    label={t("landing.modal.fields.startsAt.label")}
                     value={field.value}
                     onChange={field.onChange}
                     clearable
                     valueFormat="YYYY-MM-DD"
                     placeholder={t(
-                      "landing.createTournament.fields.startsAt.placeholder",
+                      "landing.modal.fields.startsAt.placeholder",
                     )}
                   />
                 )}
@@ -207,13 +207,13 @@ export function CreateTournamentModal({
                 name="ends_at"
                 render={({ field }) => (
                   <DateInput
-                    label={t("landing.createTournament.fields.endsAt.label")}
+                    label={t("landing.modal.fields.endsAt.label")}
                     value={field.value}
                     onChange={field.onChange}
                     clearable
                     valueFormat="YYYY-MM-DD"
                     placeholder={t(
-                      "landing.createTournament.fields.endsAt.placeholder",
+                      "landing.modal.fields.endsAt.placeholder",
                     )}
                     minDate={form.watch("starts_at") ?? undefined}
                   />
@@ -238,7 +238,7 @@ export function CreateTournamentModal({
                 disabled={!canSubmit}
                 type="submit"
               >
-                {t("landing.createTournament.actions.create")}
+                {t("common.create")}
               </Button>
             </Group>
           </Stack>
