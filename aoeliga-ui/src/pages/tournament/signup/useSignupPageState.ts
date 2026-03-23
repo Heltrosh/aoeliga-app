@@ -20,6 +20,7 @@ import type {
   Tournament,
 } from "../../../api/schemas/tournaments";
 import type { useTournamentAccess } from "../../../hooks/useTournamentAccess";
+import { useI18n } from "../../../i18n/I18nProvider";
 
 type TournamentAccessShape = ReturnType<typeof useTournamentAccess>;
 
@@ -41,6 +42,7 @@ export function useSignupPageState({
   user,
 }: UseSignupPageStateArgs) {
   const qc = useQueryClient();
+  const { t } = useI18n();
 
   const slug = tournament?.slug ?? "";
 
@@ -62,8 +64,11 @@ export function useSignupPageState({
   const [settingsRecentDays, setSettingsRecentDays] = useState<number | null>(
     tournament?.recent_games_days ?? null,
   );
-
-  const [refreshFeedback, setRefreshFeedback] = useState<string | null>(null);
+  
+  const [selfFeedback, setSelfFeedback] = useState<string | null>(null);
+  const [tableFeedback, setTableFeedback] = useState<string | null>(null);
+  const [settingsFeedback, setSettingsFeedback] = useState<string | null>(null);
+  const [adminRegistrationFeedback, setAdminRegistrationFeedback] = useState<string | null>(null);
 
   if (!tournament) {
     throw new Error("SignupPage requires tournament");
@@ -75,10 +80,7 @@ export function useSignupPageState({
 
   const canUserAccessPage =
     !!user &&
-    (
-      isSignupStage ||
-      (isStaff && tournament.status === "draft")
-    );
+    (isSignupStage || (isStaff && tournament.status === "draft"));
 
   const isClosedForNormalUser =
     !!user &&
@@ -95,12 +97,16 @@ export function useSignupPageState({
     queryKey: tournamentKeys.registrationMe(slug),
     queryFn: () => getMyTournamentRegistration(slug),
     enabled: !!slug && !!user && canUserAccessPage,
+    refetchInterval: !!slug && !!user && canUserAccessPage ? 10000 : false,
+    refetchIntervalInBackground: true,
   });
 
   const registrationsQuery = useQuery({
     queryKey: tournamentKeys.registrations(slug),
     queryFn: () => getTournamentRegistrations(slug),
     enabled: !!slug && showRegistrationsTableSection,
+    refetchInterval: !!slug && showRegistrationsTableSection ? 10000 : false,
+    refetchIntervalInBackground: true,
   });
 
   const usersQuery = useQuery({
@@ -116,27 +122,23 @@ export function useSignupPageState({
     selfRegistrationQuery.data?.capabilities ?? DEFAULT_SELF_CAPABILITIES;
 
   const selfStatus = selfRegistration?.status ?? null;
-  const canReRegister =
-    selfStatus === "rejected" || selfStatus === "withdrawn";
+  const canReRegister = selfStatus === "rejected" || selfStatus === "withdrawn";
 
   const isCreateMode = !selfRegistration || isReRegistering;
   const isEditableForm = isCreateMode || selfCapabilities.can_edit;
 
   const showSelfSection =
     !!user &&
-    (
-      isStaff ||
-      canSelfRegister ||
-      selfRegistrationQuery.isPending ||
-      !!selfRegistration
-    );
+    (isStaff || canSelfRegister || selfRegistrationQuery.isPending || !!selfRegistration);
 
   const registrations = useMemo(
     () => registrationsQuery.data?.registrations ?? [],
     [registrationsQuery.data],
   );
 
-  const selfSectionTitle = isCreateMode ? "Sign up" : "Your registration";
+  const selfSectionTitle = isCreateMode
+    ? t("tournament.signup.self.title.create")
+    : t("tournament.signup.self.title.edit");
 
   useEffect(() => {
     const registration = selfRegistrationQuery.data?.registration;
@@ -159,16 +161,44 @@ export function useSignupPageState({
   }, [tournament.registrations_open, tournament.recent_games_days]);
 
   useEffect(() => {
-    if (!refreshFeedback) {
-      return;
-    }
+    if (!selfFeedback) return;
 
     const timeout = window.setTimeout(() => {
-      setRefreshFeedback(null);
+      setSelfFeedback(null);
     }, 3000);
 
     return () => window.clearTimeout(timeout);
-  }, [refreshFeedback]);
+  }, [selfFeedback]);
+
+  useEffect(() => {
+    if (!tableFeedback) return;
+
+    const timeout = window.setTimeout(() => {
+      setTableFeedback(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timeout);
+  }, [tableFeedback]);
+
+  useEffect(() => {
+    if (!settingsFeedback) return;
+
+    const timeout = window.setTimeout(() => {
+      setSettingsFeedback(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timeout);
+  }, [settingsFeedback]);
+
+  useEffect(() => {
+    if (!adminRegistrationFeedback) return;
+
+    const timeout = window.setTimeout(() => {
+      setAdminRegistrationFeedback(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timeout);
+  }, [adminRegistrationFeedback]);
 
   function openReview(item: StaffTournamentRegistration) {
     setReviewModal(item);
@@ -191,6 +221,10 @@ export function useSignupPageState({
       });
     },
     onSuccess: async () => {
+      if (!isCreateMode) {
+        setSelfFeedback(t("tournament.signup.feedback.selfUpdated"));
+      }
+
       await qc.invalidateQueries({ queryKey: tournamentKeys.registrationMe(slug) });
       await qc.invalidateQueries({ queryKey: tournamentKeys.registrations(slug) });
     },
@@ -201,10 +235,9 @@ export function useSignupPageState({
       user_id: number;
       aoe2companion_url: string;
       note: string | null;
-    }) =>
-      createTournamentRegistrationForUser(slug, values),
+    }) => createTournamentRegistrationForUser(slug, values),
     onSuccess: async () => {
-      setRefreshFeedback("Player registration created.");
+      setAdminRegistrationFeedback(t("tournament.signup.feedback.playerRegistrationCreated"));
       await qc.invalidateQueries({ queryKey: tournamentKeys.registrations(slug) });
     },
   });
@@ -234,7 +267,7 @@ export function useSignupPageState({
     onSuccess: async () => {
       setReviewModal(null);
       setReviewNote("");
-      setRefreshFeedback("Registration review saved.");
+      setTableFeedback(t("tournament.signup.feedback.reviewSaved"));
       await qc.invalidateQueries({ queryKey: tournamentKeys.registrations(slug) });
       await qc.invalidateQueries({ queryKey: tournamentKeys.registrationMe(slug) });
     },
@@ -243,7 +276,16 @@ export function useSignupPageState({
   const refreshOneMutation = useMutation({
     mutationFn: (targetUserId: number) => refreshTournamentRegistration(slug, targetUserId),
     onSuccess: async (_, targetUserId) => {
-      setRefreshFeedback(`Registration #${targetUserId} refreshed.`);
+      const user = registrations.find((r) => r.user_id === targetUserId);
+      const userName =
+        user?.user.display_name ||
+        user?.user.discord_name ||
+        `#${targetUserId}`;
+
+      setTableFeedback(
+        t("tournament.signup.feedback.registrationRefreshed", { userName }),
+      );
+
       await qc.invalidateQueries({ queryKey: tournamentKeys.registrations(slug) });
     },
   });
@@ -251,7 +293,7 @@ export function useSignupPageState({
   const refreshAllMutation = useMutation({
     mutationFn: () => refreshAllTournamentRegistrations(slug),
     onSuccess: async () => {
-      setRefreshFeedback("All registrations refreshed.");
+      setTableFeedback(t("tournament.signup.feedback.allRegistrationsRefreshed"));
       await qc.invalidateQueries({ queryKey: tournamentKeys.registrations(slug) });
     },
   });
@@ -263,7 +305,7 @@ export function useSignupPageState({
         recent_games_days: settingsRecentDays,
       }),
     onSuccess: async () => {
-      setRefreshFeedback("Registration settings saved.");
+      setSettingsFeedback(t("tournament.signup.feedback.settingsSaved"));
       await qc.invalidateQueries({ queryKey: tournamentKeys.context(slug) });
       await qc.invalidateQueries({ queryKey: tournamentKeys.all });
     },
@@ -315,8 +357,10 @@ export function useSignupPageState({
     settingsRecentDays,
     setSettingsRecentDays,
 
-    refreshFeedback,
-    setRefreshFeedback,
+    selfFeedback,
+    tableFeedback,
+    settingsFeedback,
+    adminRegistrationFeedback,
 
     registrations,
     users,

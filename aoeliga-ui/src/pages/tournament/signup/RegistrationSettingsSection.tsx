@@ -1,6 +1,7 @@
-import { Badge, Button, Group, NumberInput, Stack, Text } from "@mantine/core";
+import { Alert, Badge, Button, Group, NumberInput, Stack, Text } from "@mantine/core";
 
 import { CollapsibleTile } from "../../../components/tournament-admin/shared";
+import { useI18n } from "../../../i18n/I18nProvider";
 import type { SignupPageState } from "./useSignupPageState";
 
 export function RegistrationSettingsSection({
@@ -8,6 +9,8 @@ export function RegistrationSettingsSection({
 }: {
   state: SignupPageState;
 }) {
+  const { t } = useI18n();
+
   const {
     tournament,
     settingsOpenValue,
@@ -15,33 +18,44 @@ export function RegistrationSettingsSection({
     settingsRecentDays,
     setSettingsRecentDays,
     settingsMutation,
+    settingsFeedback,
   } = state;
 
   const currentOpen = tournament.registrations_open === 1;
   const pendingChanged = settingsOpenValue !== currentOpen;
 
+  const title = t("tournament.signup.settings.title");
+
   return (
     <CollapsibleTile
-      title="Registration settings"
-      subtitle="Configure tournament signup availability and requirements."
+      title={title}
+      subtitle={t("tournament.signup.settings.subtitle")}
       defaultOpen
     >
       <Stack gap="md">
+        {settingsFeedback ? (
+          <Alert color="green" variant="light">
+            {settingsFeedback}
+          </Alert>
+        ) : null}
+
         <Stack gap="xs">
           <Group gap="xs">
-            <Text fw={600}>Current status:</Text>
+            <Text fw={600}>{t("common.currentStatus")}:</Text>
             <Badge color={currentOpen ? "green" : "gray"} variant="light">
-              {currentOpen ? "Open" : "Closed"}
+              {currentOpen
+                ? t("tournament.signup.settings.status.open")
+                : t("tournament.signup.settings.status.closed")}
             </Badge>
           </Group>
 
           <Text size="sm" c="dimmed">
-            Choose the desired state below, then save it.
+            {t("tournament.signup.settings.chooseState")}
           </Text>
         </Stack>
 
         <NumberInput
-          label="Recent games days"
+          label={t("tournament.signup.settings.recentGamesDays")}
           min={1}
           value={settingsRecentDays ?? undefined}
           onChange={(value) =>
@@ -55,7 +69,7 @@ export function RegistrationSettingsSection({
             variant={settingsOpenValue ? "filled" : "light"}
             onClick={() => setSettingsOpenValue(true)}
           >
-            Open registrations
+            {t("tournament.signup.settings.openRegistrations")}
           </Button>
 
           <Button
@@ -63,15 +77,21 @@ export function RegistrationSettingsSection({
             variant={!settingsOpenValue ? "filled" : "light"}
             onClick={() => setSettingsOpenValue(false)}
           >
-            Close registrations
+            {t("tournament.signup.settings.closeRegistrations")}
           </Button>
         </Group>
 
         <Text size="sm" c="dimmed">
-          Selected state: <b>{settingsOpenValue ? "Open" : "Closed"}</b>
-          {pendingChanged ? " (unsaved change)" : ""}
+          {t("tournament.signup.settings.selectedState", {
+            state: settingsOpenValue
+              ? t("tournament.signup.settings.status.open")
+              : t("tournament.signup.settings.status.closed"),
+          })}
+          {pendingChanged ? ` ${t("tournament.signup.settings.unsavedChange")}` : ""}
           {tournament.recent_games_days
-            ? ` • current recent games window ${tournament.recent_games_days} days`
+            ? ` ${t("tournament.signup.settings.currentWindow", {
+                days: tournament.recent_games_days,
+              })}`
             : ""}
         </Text>
 
@@ -81,7 +101,7 @@ export function RegistrationSettingsSection({
             loading={settingsMutation.isPending}
             onClick={() => settingsMutation.mutate()}
           >
-            Save settings
+            {t("tournament.signup.settings.save")}
           </Button>
         </Group>
       </Stack>

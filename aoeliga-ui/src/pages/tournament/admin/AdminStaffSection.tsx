@@ -77,7 +77,7 @@ export function AdminStaffSection({
     >
       <Stack gap="md">
         <UserPicker
-          label={t("tournament.admin.common.picker")}
+          label={t("userpicker.selectUser")}
           users={availableUsers}
           value={selectedAdminUser}
           onChange={(user) => {
@@ -91,9 +91,9 @@ export function AdminStaffSection({
 
         <div>
           <Text fw={600} mb={4}>
-            {t("tournament.admin.common.selected")}
+            {t("userpicker.selected")}
           </Text>
-          <SelectedUserInfo user={selectedAdminUser} emptyText={t("tournament.admin.common.noselected")} /> 
+          <SelectedUserInfo user={selectedAdminUser} emptyText={t("userpicker.noselected")} /> 
         </div>
 
         <Group>

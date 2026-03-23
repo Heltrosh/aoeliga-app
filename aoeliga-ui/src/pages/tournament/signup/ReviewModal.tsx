@@ -1,5 +1,6 @@
 import { Button, Group, Modal, Stack, Text, Textarea } from "@mantine/core";
 
+import { useI18n } from "../../../i18n/I18nProvider";
 import type { SignupPageState } from "./useSignupPageState";
 
 export function ReviewModal({
@@ -7,6 +8,8 @@ export function ReviewModal({
 }: {
   state: SignupPageState;
 }) {
+  const { t } = useI18n();
+
   const {
     reviewModal,
     setReviewModal,
@@ -21,12 +24,13 @@ export function ReviewModal({
     <Modal
       opened={reviewModal != null}
       onClose={() => setReviewModal(null)}
-      title="Review registration"
+      title={t("tournament.signup.review.title")}
       centered
     >
       <Stack gap="md">
         <Text fw={600}>
-          {reviewModal?.user.display_name || reviewModal?.user.discord_name || "User"}
+          {reviewModal?.user.display_name ||
+            reviewModal?.user.discord_name}
         </Text>
 
         <Group>
@@ -34,26 +38,26 @@ export function ReviewModal({
             variant={reviewStatus === "pending" ? "filled" : "light"}
             onClick={() => setReviewStatus("pending")}
           >
-            Pending
+            {t("tournament.signup.status.pending")}
           </Button>
           <Button
             color="green"
             variant={reviewStatus === "approved" ? "filled" : "light"}
             onClick={() => setReviewStatus("approved")}
           >
-            Approve
+            {t("tournament.signup.review.approve")}
           </Button>
           <Button
             color="red"
             variant={reviewStatus === "rejected" ? "filled" : "light"}
             onClick={() => setReviewStatus("rejected")}
           >
-            Reject
+            {t("tournament.signup.review.reject")}
           </Button>
         </Group>
 
         <Textarea
-          label="Review note"
+          label={t("tournament.signup.review.note")}
           value={reviewNote}
           onChange={(event) => setReviewNote(event.currentTarget.value)}
           autosize
@@ -62,7 +66,7 @@ export function ReviewModal({
 
         <Group justify="flex-end">
           <Button variant="subtle" onClick={() => setReviewModal(null)}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             color="gold"
@@ -76,7 +80,7 @@ export function ReviewModal({
               });
             }}
           >
-            Save review
+            {t("tournament.signup.review.save")}
           </Button>
         </Group>
       </Stack>

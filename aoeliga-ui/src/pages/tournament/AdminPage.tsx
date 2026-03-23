@@ -22,15 +22,15 @@ export default function AdminPage() {
 
   if (!canSeePage) {
     return (
-      <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">
-        {t("tournament.admin.noaccess")}
+      <Alert icon={<IconAlertCircle size={20} />} color="red" variant="light">
+        {t("common.pageAccessDenied")}
       </Alert>
     );
   }
 
   if (!slug) {
     return (
-      <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">
+      <Alert icon={<IconAlertCircle size={20} />} color="red" variant="light">
         {t("tournament.admin.noslug")}
       </Alert>
     );
