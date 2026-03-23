@@ -9,6 +9,10 @@ import type { TournamentRegistrationRow, TournamentRegistrationSelfCapabilities,
 import type { TournamentRow } from '../domain/tournament';
 import { fetchRegistrationSnapshot } from '../lib/registration';
 
+import { getReplayPlayers, listReplaysForMatchUnit } from '../repositories/replays';
+import { assertReplayFileBasics, assertValidPositiveId, assertValidUserId, buildReplayObjectKey, ensureFile, isStaffForReplay, parseBooleanLike, sha1Hex, withMatchUnitById, withReplayById } from '../lib/replays';
+import { callReplayParser, createPendingReplay, ensureReplaySha1IsUnique, generateR2PresignedGetUrl, markReplaySkipped, persistAcceptedReplayParse, runReplayHardValidation, runReplayPostAcceptanceTasks, deleteReplayObject } from '../services/replays';
+
 const tournaments = new Hono<AppBindings>();
 
 type TournamentRegistrationStaffRow = TournamentRegistrationRow & {
@@ -17,14 +21,6 @@ type TournamentRegistrationStaffRow = TournamentRegistrationRow & {
   display_name: string | null;
   avatar: string | null;
 };
-
-function assertValidUserId(value: string, label = 'user id'): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    httpError(400, `Invalid ${label}`);
-  }
-  return parsed;
-}
 
 function assertRegistrationsAvailableForRead(tournament: TournamentRow) {
   if (
@@ -1421,40 +1417,6 @@ tournaments.delete('/:slug/matches/:matchId', requireUser, withTournamentBySlug,
 
 // replays
 
-tournaments.get('/:slug/matches/:matchId/replays', optionalUser, withTournamentBySlug, async (c) => {
-  const t = c.get('tournament')!;
-  const matchId = Number(c.req.param('matchId'));
-  if (!Number.isInteger(matchId) || matchId <= 0) httpError(400, 'Invalid match id');
-
-  const rows = await c.env.DB.prepare(`SELECT * FROM replays WHERE tournament_id = ? AND match_id = ? ORDER BY uploaded_at ASC`).bind(t.id, matchId).all();
-
-  return c.json({ replays: rows.results ?? [] });
-});
-
-tournaments.post('/:slug/matches/:matchId/replays', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('replay.upload.own', (c) => ({ matchId: Number(c.req.param('matchId')) })), async (c) => {
-  const t = c.get('tournament')!;
-  const user = c.get('user')!;
-  const matchId = Number(c.req.param('matchId'));
-  if (!Number.isInteger(matchId) || matchId <= 0) httpError(400, 'Invalid match id');
-  const body = await c.req.json<{ r2_object_key?: string; file_size_bytes?: number | null; content_hash?: string | null; original_filename?: string | null }>();
-  if (!body.r2_object_key) httpError(400, 'r2_object_key is required');
-
-  await c.env.DB.prepare(
-    `INSERT INTO replays (match_id, tournament_id, uploaded_by, r2_object_key, file_size_bytes, content_hash, original_filename)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).bind(
-    matchId,
-    t.id,
-    user.id,
-    body.r2_object_key,
-    body.file_size_bytes ?? null,
-    body.content_hash ?? null,
-    body.original_filename ?? null,
-  ).run();
-
-  return c.json({ ok: true }, 201);
-});
-
 // match units
 
 tournaments.get('/:slug/matches/:matchId/units', optionalUser, withTournamentBySlug, async (c) => {
@@ -1476,6 +1438,138 @@ tournaments.get('/:slug/matches/:matchId/units/:unitId', optionalUser, withTourn
   if (!row) httpError(404, 'Match unit not found');
 
   return c.json({ unit: row });
+});
+
+tournaments.get('/:slug/match-units/:matchUnitId/replays', optionalUser, withTournamentBySlug, withMatchUnitById, async (c) => {
+  const matchUnit = c.get('matchUnit')!;
+  const replays = await listReplaysForMatchUnit(c.env.DB, { matchUnitId: matchUnit.id });
+
+  return c.json({ replays });
+});
+
+tournaments.post('/:slug/match-units/:matchUnitId/replays', requireUser, withTournamentBySlug, withTournamentAccess, withMatchUnitById, async (c, next) => {
+    const canManage = await can(c, 'match.manage');
+    if (canManage) {
+      await next();
+      return;
+    }
+    const allowed = await can(c, 'replay.upload.own', { matchId: c.get('matchUnit')!.match_id });
+    if (!allowed) httpError(403, 'Forbidden');
+    await next();
+  },
+  async (c) => {
+    const tournament = c.get('tournament')!;
+    const user = c.get('user')!;
+    const matchUnit = c.get('matchUnit')!;
+
+    const body = await c.req.parseBody();
+    const replayFile = ensureFile(body.file);
+    assertReplayFileBasics(replayFile);
+
+    const skipParse = parseBooleanLike(body.skip_parse);
+    if (skipParse && !isStaffForReplay(c)) {
+      httpError(403, 'Only tournament or global admins can upload a replay without parser validation');
+    }
+
+    const bytes = await replayFile.arrayBuffer();
+    const fileSha1 = await sha1Hex(bytes);
+    await ensureReplaySha1IsUnique(c, fileSha1);
+
+    const objectKey = buildReplayObjectKey({
+      tournamentSlug: tournament.slug,
+      matchUnitId: matchUnit.id,
+      filename: replayFile.name,
+    });
+
+    await c.env.REPLAYS_BUCKET.put(objectKey, bytes, {
+      httpMetadata: {
+        contentType: replayFile.type || 'application/octet-stream',
+      },
+    });
+
+    let replayId = 0;
+
+    try {
+      replayId = await createPendingReplay(c, {
+        matchUnitId: matchUnit.id,
+        uploadedBy: user.id,
+        r2ObjectKey: objectKey,
+        originalFilename: replayFile.name,
+        fileSizeBytes: replayFile.size,
+        fileSha1,
+      });
+
+      if (skipParse) {
+        await markReplaySkipped(c, replayId);
+        return c.json({
+          ok: true,
+          replay: {
+            id: replayId,
+            match_unit_id: matchUnit.id,
+            parse_status: 'pending',
+            validation_status: 'review_required',
+          },
+        }, 201);
+      }
+
+      const signedDownloadUrl = await generateR2PresignedGetUrl(c, objectKey, 300);
+      const parsed = await callReplayParser(c, { signedDownloadUrl, replayId });
+      await runReplayHardValidation(c, { matchUnit, parsed, currentReplayId: replayId });
+      await persistAcceptedReplayParse(c, { replayId, matchUnit, parsed });
+
+      if (c.executionCtx) {
+        c.executionCtx.waitUntil(runReplayPostAcceptanceTasks(c, { replayId }));
+      }
+
+      return c.json({
+        ok: true,
+        replay: {
+          id: replayId,
+          match_unit_id: matchUnit.id,
+          parse_status: 'parsed',
+          validation_status: 'valid',
+        },
+        parsed,
+      }, 201);
+    } catch (err) {
+      if (replayId > 0) {
+        try {
+          await c.env.REPLAYS_BUCKET.delete(objectKey);
+        } finally {
+          await c.env.DB.prepare(`DELETE FROM replays WHERE id = ?`).bind(replayId).run();
+        }
+      } else {
+        await c.env.REPLAYS_BUCKET.delete(objectKey);
+      }
+      throw err;
+    }
+  },
+);
+
+tournaments.post('/:slug/replays/:replayId/download', withTournamentBySlug, withReplayById, async (c) => {
+  const replay = c.get('replay')!;
+  const url = await generateR2PresignedGetUrl(c, replay.r2_object_key, 120);
+  return c.json({ url, expires_in_seconds: 120 });
+});
+
+tournaments.delete('/:slug/replays/:replayId', requireUser, withTournamentBySlug, withTournamentAccess, withReplayById, async (c, next) => {
+    const allowed = await can(c, 'platform.admin') || c.get('tournamentRole') === 'admin';
+    if (!allowed) httpError(403, 'Forbidden');
+    await next();
+  },
+  async (c) => {
+    const replay = c.get('replay')!;
+    await deleteReplayObject(c, replay);
+    const result = await c.env.DB.prepare(`DELETE FROM replays WHERE id = ?`).bind(replay.id).run();
+    if ((result.meta.changes ?? 0) === 0) httpError(404, 'Replay not found');
+    return c.json({ ok: true });
+  },
+);
+
+tournaments.get('/:slug/replays/:replayId', optionalUser, withTournamentBySlug, withReplayById, async (c) => {
+  const replay = c.get('replay')!;
+  const players = await getReplayPlayers(c.env.DB, replay.id);
+  return c.json({ replay, players });
 });
 
 export default tournaments;

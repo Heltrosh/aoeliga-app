@@ -2,6 +2,7 @@ import type { Env } from "./env";
 import type { AuthUser } from "../domain/auth";
 import type { TournamentRow } from "../domain/tournament";
 import type { TournamentRole } from "../domain/statuses";
+import type { MatchUnitContextRow, ReplayContextRow } from '../domain/replay';
 
 export type AppBindings = {
   Bindings: Env;
@@ -11,5 +12,7 @@ export type AppBindings = {
     tournamentRole: TournamentRole | null;
     isTournamentStreamer: boolean;
     isTournamentPlayer: boolean;
+    matchUnit: MatchUnitContextRow | null;
+    replay: ReplayContextRow | null;
   };
 };

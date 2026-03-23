@@ -19,6 +19,13 @@
 			"database_name": "aoeliga_db",
 			"database_id": "12292d26-ea9c-4eff-b603-aab08f6e30ed"
 		}
+	],  
+	"r2_buckets": [
+    {
+      "binding": "REPLAYS_BUCKET",
+      "bucket_name": "aoeliga-replays",
+	  "remote": true
+    }
 	]
 	/**
 	 * Smart Placement

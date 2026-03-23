@@ -13,6 +13,7 @@ import PlayersPage from "../pages/tournament/PlayersPage";
 import AdminPage from "../pages/tournament/AdminPage";
 import AdminUsersPage from "../pages/landing/admin/AdminUsersPage";
 import SignupPage from "../pages/tournament/SignupPage";
+import ReplayTestPage from "../pages/tournament/ReplayTestPage";
 
 export const router = createBrowserRouter([
   {
@@ -32,7 +33,8 @@ export const router = createBrowserRouter([
           { path: "schedule", element: <SchedulePage /> },
           { path: "players", element: <PlayersPage /> },
           { path: "signup", element: <SignupPage /> },
-          { path: "admin", element: <AdminPage /> }
+          { path: "admin", element: <AdminPage /> },
+          { path: "replay-test", element: <ReplayTestPage /> }
         ],
       },
     ],
