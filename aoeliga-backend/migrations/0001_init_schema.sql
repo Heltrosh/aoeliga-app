@@ -159,42 +159,112 @@ CREATE TABLE IF NOT EXISTS matches (
 );
 
 CREATE TABLE IF NOT EXISTS replays (
-  id                INTEGER PRIMARY KEY AUTOINCREMENT,
-  match_id          INTEGER NOT NULL,
-  tournament_id     INTEGER NOT NULL,
-  uploaded_by       INTEGER,
-  uploaded_at       TEXT NOT NULL DEFAULT (datetime('now')),
-  r2_object_key     TEXT NOT NULL,
-  file_size_bytes   INTEGER,
-  content_hash      TEXT,
-  original_filename TEXT,
-  parse_status      TEXT NOT NULL DEFAULT 'pending', -- pending|parsing|parsed|failed
-  parse_error       TEXT,
+  id                         INTEGER PRIMARY KEY AUTOINCREMENT,
+  match_unit_id              INTEGER NOT NULL,
+  
+  uploaded_by                INTEGER,
+  uploaded_at                TEXT NOT NULL DEFAULT (datetime('now')),
 
-  FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
-  FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+  r2_object_key              TEXT NOT NULL,
+  original_filename          TEXT,
+  file_size_bytes            INTEGER,
+  file_sha1                  TEXT,
+
+  parse_status               TEXT NOT NULL DEFAULT 'pending',  -- pending|parsing|parsed|failed
+  validation_status          TEXT NOT NULL DEFAULT 'pending',  -- pending|valid|review_required
+
+  parse_started_at           TEXT,
+  parsed_at                  TEXT,
+  parse_error                TEXT,
+
+  validation_completed_at    TEXT,
+  validation_error           TEXT,
+  review_reason              TEXT, -- short human/admin-facing summary for soft-check failures
+
+  valid_replay               INTEGER,
+  completed                  INTEGER,
+  duration                   REAL,
+  played_at                  REAL,
+
+  map_name                   TEXT,
+  map_dimension              INTEGER,
+
+  diplomacy_type             TEXT,
+  team_size                  TEXT,
+  speed                      TEXT,
+  cheats                     INTEGER,
+  hidden_civs                INTEGER,
+  map_reveal                 TEXT,
+  starting_resources         TEXT,
+  starting_age               TEXT,
+  victory_condition          TEXT,
+  team_together              INTEGER,
+  lock_teams                 INTEGER,
+  lock_speed                 INTEGER,
+  all_technologies           INTEGER,
+
+  platform_id                TEXT,
+  platform_match_id          TEXT,
+  rated                      INTEGER,
+  lobby_name                 TEXT,
+  allow_specs                INTEGER,
+  private                    INTEGER,
+  spec_delay                 INTEGER,
+
+  FOREIGN KEY (match_unit_id) REFERENCES match_units(id) ON DELETE CASCADE,
   FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL,
 
-  UNIQUE (tournament_id, r2_object_key),
+  UNIQUE (match_unit_id, file_sha1),
 
-  CHECK (parse_status IN ('pending', 'parsing' ,'parsed', 'failed'))
+  CHECK (parse_status IN ('pending', 'parsing', 'parsed', 'failed')),
+  CHECK (validation_status IN ('pending', 'valid', 'review_required')),
+
+  CHECK (valid_replay IN (0, 1) OR valid_replay IS NULL),
+  CHECK (completed IN (0, 1) OR completed IS NULL),
+  CHECK (cheats IN (0, 1) OR cheats IS NULL),
+  CHECK (hidden_civs IN (0, 1) OR hidden_civs IS NULL),
+  CHECK (team_together IN (0, 1) OR team_together IS NULL),
+  CHECK (lock_teams IN (0, 1) OR lock_teams IS NULL),
+  CHECK (lock_speed IN (0, 1) OR lock_speed IS NULL),
+  CHECK (all_technologies IN (0, 1) OR all_technologies IS NULL),
+  CHECK (rated IN (0, 1) OR rated IS NULL),
+  CHECK (allow_specs IN (0, 1) OR allow_specs IS NULL),
+  CHECK (private IN (0, 1) OR private IS NULL)
+);
+
+CREATE TABLE IF NOT EXISTS replay_players (
+  id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+  replay_id                   INTEGER NOT NULL,
+  player_number               INTEGER NOT NULL,
+  name                        TEXT,
+  profile_id                  TEXT,
+  civilization_id             INTEGER,
+  civilization_name           TEXT,
+  winner                      INTEGER,
+
+  matched_tournament_player_id INTEGER, -- nullable, filled once hard validation maps replay player to tournament player
+
+  FOREIGN KEY (replay_id) REFERENCES replays(id) ON DELETE CASCADE,
+  FOREIGN KEY (matched_tournament_player_id) REFERENCES tournament_players(id) ON DELETE SET NULL,
+
+  UNIQUE (replay_id, player_number),
+  UNIQUE (replay_id, profile_id),
+
+  CHECK (winner IN (0, 1) OR winner IS NULL)
 );
 
 CREATE TABLE IF NOT EXISTS match_units (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   match_id   INTEGER NOT NULL,
   unit_index INTEGER NOT NULL,
-  replay_id  INTEGER NOT NULL,
   winner_id  INTEGER NOT NULL,
   loser_id   INTEGER NOT NULL,
 
   FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
-  FOREIGN KEY (replay_id) REFERENCES replays(id) ON DELETE RESTRICT,
   FOREIGN KEY (winner_id) REFERENCES tournament_players(id) ON DELETE RESTRICT,
   FOREIGN KEY (loser_id) REFERENCES tournament_players(id) ON DELETE RESTRICT,
 
   UNIQUE (match_id, unit_index),
-  UNIQUE (replay_id),
   CHECK (winner_id <> loser_id)
 );
 
@@ -230,8 +300,15 @@ CREATE INDEX IF NOT EXISTS idx_matches_div_stage_week       ON matches(division_
 CREATE INDEX IF NOT EXISTS idx_matches_players              ON matches(player1_id, player2_id);
 CREATE INDEX IF NOT EXISTS idx_matches_status               ON matches(status);
 
-CREATE INDEX IF NOT EXISTS idx_replays_tournament_status    ON replays(tournament_id, parse_status);
-CREATE INDEX IF NOT EXISTS idx_replays_match                ON replays(match_id);
+CREATE INDEX IF NOT EXISTS idx_replays_match_unit           ON replays(match_unit_id);
+CREATE INDEX IF NOT EXISTS idx_replays_parse_status         ON replays(parse_status);
+CREATE INDEX IF NOT EXISTS idx_replays_validation_status    ON replays(validation_status);
+CREATE INDEX IF NOT EXISTS idx_replays_platform_match_id    ON replays(platform_match_id);
+CREATE INDEX IF NOT EXISTS idx_replays_uploaded_by          ON replays(uploaded_by);
+
+CREATE INDEX IF NOT EXISTS idx_replay_players_replay        ON replay_players(replay_id);
+CREATE INDEX IF NOT EXISTS idx_replay_players_profile_id    ON replay_players(profile_id);
+CREATE INDEX IF NOT EXISTS idx_replay_players_matched_tp    ON replay_players(matched_tournament_player_id);
 
 CREATE INDEX IF NOT EXISTS idx_units_match                  ON match_units(match_id);
 CREATE INDEX IF NOT EXISTS idx_units_winner                 ON match_units(winner_id);
