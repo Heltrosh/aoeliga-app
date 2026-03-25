@@ -97,16 +97,16 @@ export function useSignupPageState({
     queryKey: tournamentKeys.registrationMe(slug),
     queryFn: () => getMyTournamentRegistration(slug),
     enabled: !!slug && !!user && canUserAccessPage,
-    refetchInterval: !!slug && !!user && canUserAccessPage ? 10000 : false,
-    refetchIntervalInBackground: true,
+    refetchInterval: !!slug && !!user && canUserAccessPage ? 30000 : false,
+    refetchIntervalInBackground: false,
   });
 
   const registrationsQuery = useQuery({
     queryKey: tournamentKeys.registrations(slug),
     queryFn: () => getTournamentRegistrations(slug),
     enabled: !!slug && showRegistrationsTableSection,
-    refetchInterval: !!slug && showRegistrationsTableSection ? 10000 : false,
-    refetchIntervalInBackground: true,
+    refetchInterval: !!slug && showRegistrationsTableSection ? 30000 : false,
+    refetchIntervalInBackground: false,
   });
 
   const usersQuery = useQuery({

@@ -6,17 +6,26 @@ export type TournamentRegistrationRow = {
   user_id: number;
   aoe_id: string;
   aoe_name: string;
+
   signup_rating: number | null;
   signup_max_rating: number | null;
   signup_team_rating: number | null;
   signup_max_team_rating: number | null;
+
   current_rating: number | null;
   current_max_rating: number | null;
   current_team_rating: number | null;
   current_max_team_rating: number | null;
+
+  activation_rating: number | null;
+  activation_max_rating: number | null;
+  activation_team_rating: number | null;
+  activation_max_team_rating: number | null;
+
   current_data_fetched_at: string | null;
   total_games: number | null;
   recent_games: number | null;
+
   status: TournamentRegistrationStatus;
   submitted_at: string;
   updated_at: string;

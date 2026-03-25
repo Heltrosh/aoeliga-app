@@ -8,10 +8,12 @@ import { getDivisionRulesetDto, getDivisionStandingsDto, getMatchFormatPreviewDt
 import type { TournamentRegistrationRow, TournamentRegistrationSelfCapabilities, TournamentRegistrationSelfDto } from '../domain/registration';
 import type { TournamentRow } from '../domain/tournament';
 import { fetchRegistrationSnapshot } from '../lib/registration';
+import type { RegistrationSnapshot } from '../lib/registration';
 
 import { getReplayPlayers, listReplaysForMatchUnit } from '../repositories/replays';
 import { assertReplayFileBasics, assertValidPositiveId, assertValidUserId, buildReplayObjectKey, ensureFile, isStaffForReplay, parseBooleanLike, sha1Hex, withMatchUnitById, withReplayById } from '../lib/replays';
 import { callReplayParser, createPendingReplay, ensureReplaySha1IsUnique, generateR2PresignedGetUrl, markReplaySkipped, persistAcceptedReplayParse, runReplayHardValidation, runReplayPostAcceptanceTasks, deleteReplayObject } from '../services/replays';
+import { applyTournamentSetup, generateTournamentSetupAssignments, generateTournamentSetupMatches, getTournamentSetupDto, replaceTournamentSetupAssignments, replaceTournamentSetupDivisions, replaceTournamentSetupMatches } from '../services/tournamentSetup';
 
 const tournaments = new Hono<AppBindings>();
 
@@ -111,6 +113,98 @@ function toStaffRegistrationDto(row: TournamentRegistrationStaffRow) {
   };
 }
 
+const REGISTRATION_STATS_SELECT = `
+  ps.signup_rating,
+  ps.signup_max_rating,
+  ps.signup_team_rating,
+  ps.signup_max_team_rating,
+  ps.current_rating,
+  ps.current_max_rating,
+  ps.current_team_rating,
+  ps.current_max_team_rating,
+  ps.activation_rating,
+  ps.activation_max_rating,
+  ps.activation_team_rating,
+  ps.activation_max_team_rating,
+  ps.current_data_fetched_at,
+  ps.total_games,
+  ps.recent_games
+`;
+
+async function upsertPlayerStatistics(
+  c: any,
+  input: { registrationId: number; playerId?: number | null; snapshot: RegistrationSnapshot },
+) {
+  const { registrationId, playerId = null, snapshot } = input;
+
+  await c.env.DB.prepare(
+    `INSERT INTO player_statistics (
+       registration_id,
+       player_id,
+       signup_rating,
+       signup_max_rating,
+       signup_team_rating,
+       signup_max_team_rating,
+       current_rating,
+       current_max_rating,
+       current_team_rating,
+       current_max_team_rating,
+       total_games,
+       recent_games,
+       current_data_fetched_at
+     )
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(registration_id) DO UPDATE SET
+       player_id = COALESCE(excluded.player_id, player_statistics.player_id),
+       signup_rating = excluded.signup_rating,
+       signup_max_rating = excluded.signup_max_rating,
+       signup_team_rating = excluded.signup_team_rating,
+       signup_max_team_rating = excluded.signup_max_team_rating,
+       current_rating = excluded.current_rating,
+       current_max_rating = excluded.current_max_rating,
+       current_team_rating = excluded.current_team_rating,
+       current_max_team_rating = excluded.current_max_team_rating,
+       total_games = excluded.total_games,
+       recent_games = excluded.recent_games,
+       current_data_fetched_at = datetime('now')`,
+  ).bind(
+    registrationId,
+    playerId,
+    snapshot.signupRating,
+    snapshot.signupMaxRating,
+    snapshot.signupTeamRating,
+    snapshot.signupTeamMaxRating,
+    snapshot.currentRating,
+    snapshot.currentMaxRating,
+    snapshot.currentTeamRating,
+    snapshot.currentTeamMaxRating,
+    snapshot.totalGames,
+    snapshot.recentGames,
+  ).run();
+}
+
+async function getStaffRegistrationRowByUserId(
+  c: any,
+  tournamentId: number,
+  userId: number,
+): Promise<TournamentRegistrationStaffRow | null> {
+  const row = await c.env.DB.prepare(
+    `SELECT tr.*,
+            ${REGISTRATION_STATS_SELECT},
+            u.discord_id,
+            u.discord_name,
+            u.display_name,
+            u.avatar
+     FROM tournament_registrations tr
+     LEFT JOIN player_statistics ps ON ps.registration_id = tr.id
+     JOIN users u ON u.id = tr.user_id
+     WHERE tr.tournament_id = ? AND tr.user_id = ?
+     LIMIT 1`,
+  ).bind(tournamentId, userId).first();
+
+  return (row as TournamentRegistrationStaffRow | null) ?? null;
+}
+
 function getSelfRegistrationCapabilities(
   tournament: TournamentRow,
   registration: TournamentRegistrationRow | null,
@@ -150,9 +244,11 @@ async function getRegistrationByUserId(
   userId: number,
 ): Promise<TournamentRegistrationRow | null> {
   const row = await c.env.DB.prepare(
-    `SELECT *
-     FROM tournament_registrations
-     WHERE tournament_id = ? AND user_id = ?
+    `SELECT tr.*,
+            ${REGISTRATION_STATS_SELECT}
+     FROM tournament_registrations tr
+     LEFT JOIN player_statistics ps ON ps.registration_id = tr.id
+     WHERE tr.tournament_id = ? AND tr.user_id = ?
      LIMIT 1`,
   ).bind(tournamentId, userId).first();
 
@@ -327,7 +423,7 @@ tournaments.get('/:slug/divisions/:divisionId', optionalUser, withTournamentBySl
   return c.json({ division: row });
 });
 
-tournaments.post('/:slug/divisions', requireUser, withTournamentBySlug, withTournamentAccess, withTournamentAccess, requirePermission('division.manage'), async (c) => {
+tournaments.post('/:slug/divisions', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('division.manage'), async (c) => {
   const t = c.get('tournament')!;
   const body = await c.req.json<{ name?: string; ruleset_id?: number | null }>();
   if (!body.name) httpError(400, 'name is required');
@@ -432,6 +528,94 @@ tournaments.get('/:slug/divisions/:divisionId/match-format-preview', optionalUse
       roundNumber,
       roundLabel,
     }),
+  });
+});
+
+
+// tournament setup
+
+tournaments.get('/:slug/setup', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('tournament.update'), async (c) => {
+  const tournament = c.get('tournament')!;
+  const user = c.get('user')!;
+  return c.json({
+    setup: await getTournamentSetupDto(c, tournament, user.id),
+  });
+});
+
+tournaments.put('/:slug/setup/divisions', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('tournament.update'), async (c) => {
+  const tournament = c.get('tournament')!;
+  const user = c.get('user')!;
+  const body = await c.req.json<{ divisions?: Array<{ name?: string; ruleset_id?: number | null }> }>();
+
+  return c.json({
+    setup: await replaceTournamentSetupDivisions(c, tournament, user.id, body.divisions ?? []),
+  });
+});
+
+tournaments.post('/:slug/setup/assignments/generate', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('tournament.update'), async (c) => {
+  const tournament = c.get('tournament')!;
+  const user = c.get('user')!;
+  const body = await c.req.json<{ distribution_mode?: string; rating_key?: string }>();
+
+  return c.json({
+    setup: await generateTournamentSetupAssignments(c, tournament, user.id, body),
+  });
+});
+
+tournaments.put('/:slug/setup/assignments', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('tournament.update'), async (c) => {
+  const tournament = c.get('tournament')!;
+  const user = c.get('user')!;
+  const body = await c.req.json<{
+    assignments?: Array<{
+      registration_id?: number;
+      setup_division_id?: number;
+      sort_order?: number | null;
+    }>;
+  }>();
+
+  return c.json({
+    setup: await replaceTournamentSetupAssignments(c, tournament, user.id, body.assignments ?? []),
+  });
+});
+
+tournaments.post('/:slug/setup/matches/generate', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('tournament.update'), async (c) => {
+  const tournament = c.get('tournament')!;
+  const user = c.get('user')!;
+
+  return c.json({
+    setup: await generateTournamentSetupMatches(c, tournament, user.id),
+  });
+});
+
+tournaments.put('/:slug/setup/matches', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('tournament.update'), async (c) => {
+  const tournament = c.get('tournament')!;
+  const user = c.get('user')!;
+  const body = await c.req.json<{
+    matches?: Array<{
+      setup_division_id?: number;
+      stage_key?: string;
+      stage_type?: string;
+      round_number?: number;
+      round_label?: string | null;
+      week_number?: number | null;
+      format_id?: string;
+      player1_registration_id?: number | null;
+      player2_registration_id?: number | null;
+    }>;
+  }>();
+
+  return c.json({
+    setup: await replaceTournamentSetupMatches(c, tournament, user.id, body.matches ?? []),
+  });
+});
+
+tournaments.post('/:slug/setup/apply', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('tournament.update'), async (c) => {
+  const tournament = c.get('tournament')!;
+  const user = c.get('user')!;
+
+  return c.json({
+    ok: true,
+    setup: await applyTournamentSetup(c, tournament, user.id),
   });
 });
 
@@ -587,61 +771,33 @@ tournaments.post('/:slug/registration/me', requireUser, withTournamentBySlug, wi
 
   await assertAoeIdAvailable(c, tournament.id, snapshot.aoeId, user.id);
 
+  let registrationId: number;
+
   if (!existing) {
-    await c.env.DB.prepare(
+    const insertResult = await c.env.DB.prepare(
       `INSERT INTO tournament_registrations (
          tournament_id,
          user_id,
          aoe_id,
          aoe_name,
-         signup_rating,
-         signup_max_rating,
-         signup_team_rating,
-         signup_max_team_rating,
-         current_rating,
-         current_max_rating,
-         current_team_rating,
-         current_max_team_rating,
-         current_data_fetched_at,
-         total_games,
-         recent_games,
          status,
          note
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?, ?, 'pending', ?)`,
+       VALUES (?, ?, ?, ?, 'pending', ?)`,
     ).bind(
       tournament.id,
       user.id,
       snapshot.aoeId,
       snapshot.aoeName,
-      snapshot.signupRating,
-      snapshot.signupMaxRating,
-      snapshot.signupTeamRating,
-      snapshot.signupTeamMaxRating,
-      snapshot.currentRating,
-      snapshot.currentMaxRating,
-      snapshot.currentTeamRating,
-      snapshot.currentTeamMaxRating,
-      snapshot.totalGames,
-      snapshot.recentGames,
       body.note?.trim() || null,
     ).run();
+
+    registrationId = Number(insertResult.meta.last_row_id);
   } else {
     await c.env.DB.prepare(
       `UPDATE tournament_registrations
        SET aoe_id = ?,
            aoe_name = ?,
-           signup_rating = ?,
-           signup_max_rating = ?,
-           signup_team_rating = ?,
-           signup_max_team_rating = ?,
-           current_rating = ?,
-           current_max_rating = ?,
-           current_team_rating = ?,
-           current_max_team_rating = ?,
-           current_data_fetched_at = datetime('now'),
-           total_games = ?,
-           recent_games = ?,
            status = 'pending',
            submitted_at = datetime('now'),
            updated_at = datetime('now'),
@@ -653,21 +809,18 @@ tournaments.post('/:slug/registration/me', requireUser, withTournamentBySlug, wi
     ).bind(
       snapshot.aoeId,
       snapshot.aoeName,
-      snapshot.signupRating,
-      snapshot.signupMaxRating,
-      snapshot.signupTeamRating,
-      snapshot.signupTeamMaxRating,
-      snapshot.currentRating,
-      snapshot.currentMaxRating,
-      snapshot.currentTeamRating,
-      snapshot.currentTeamMaxRating,
-      snapshot.totalGames,
-      snapshot.recentGames,
       body.note?.trim() || null,
       tournament.id,
       user.id,
     ).run();
+
+    registrationId = existing.id;
   }
+
+  await upsertPlayerStatistics(c, {
+    registrationId,
+    snapshot,
+  });
 
   const registration = await getRegistrationByUserId(c, tournament.id, user.id);
   if (!registration) {
@@ -716,37 +869,21 @@ tournaments.put('/:slug/registration/me', requireUser, withTournamentBySlug, wit
     `UPDATE tournament_registrations
      SET aoe_id = ?,
          aoe_name = ?,
-         signup_rating = ?,
-         signup_max_rating = ?,
-         signup_team_rating = ?,
-         signup_max_team_rating = ?,
-         current_rating = ?,
-         current_max_rating = ?,
-         current_team_rating = ?,
-         current_max_team_rating = ?,
-         current_data_fetched_at = datetime('now'),
-         total_games = ?,
-         recent_games = ?,
          note = ?,
          updated_at = datetime('now')
      WHERE tournament_id = ? AND user_id = ?`,
   ).bind(
     snapshot.aoeId,
     snapshot.aoeName,
-    snapshot.signupRating,
-    snapshot.signupMaxRating,
-    snapshot.signupTeamRating,
-    snapshot.signupTeamMaxRating,
-    snapshot.currentRating,
-    snapshot.currentMaxRating,
-    snapshot.currentTeamRating,
-    snapshot.currentTeamMaxRating,
-    snapshot.totalGames,
-    snapshot.recentGames,
     body.note?.trim() || null,
     tournament.id,
     user.id,
   ).run();
+
+  await upsertPlayerStatistics(c, {
+    registrationId: existing.id,
+    snapshot,
+  });
 
   const registration = await getRegistrationByUserId(c, tournament.id, user.id);
   if (!registration) {
@@ -800,20 +937,22 @@ tournaments.get('/:slug/registrations', requireUser, withTournamentBySlug, withT
 
   assertRegistrationsAvailableForRead(tournament);
 
-  const rows = await c.env.DB.prepare(
+    const rows = await c.env.DB.prepare(
     `SELECT tr.*,
+            ${REGISTRATION_STATS_SELECT},
             u.discord_id,
             u.discord_name,
             u.display_name,
             u.avatar
      FROM tournament_registrations tr
+     LEFT JOIN player_statistics ps ON ps.registration_id = tr.id
      JOIN users u ON u.id = tr.user_id
      WHERE tr.tournament_id = ?
      ORDER BY
-       (tr.current_rating IS NULL) ASC,
-       tr.current_rating DESC,
-       (tr.current_max_rating IS NULL) ASC,
-       tr.current_max_rating DESC,
+       (ps.current_rating IS NULL) ASC,
+       ps.current_rating DESC,
+       (ps.current_max_rating IS NULL) ASC,
+       ps.current_max_rating DESC,
        tr.user_id ASC`,
   ).bind(tournament.id).all();
 
@@ -852,61 +991,33 @@ tournaments.post('/:slug/registrations', requireUser, withTournamentBySlug, with
     httpError(409, 'That user already has a registration for this tournament');
   }
 
+  let registrationId: number;
+
   if (!existing) {
-    await c.env.DB.prepare(
+    const insertResult = await c.env.DB.prepare(
       `INSERT INTO tournament_registrations (
          tournament_id,
          user_id,
          aoe_id,
          aoe_name,
-         signup_rating,
-         signup_max_rating,
-         signup_team_rating,
-         signup_max_team_rating,
-         current_rating,
-         current_max_rating,
-         current_team_rating,
-         current_max_team_rating,
-         current_data_fetched_at,
-         total_games,
-         recent_games,
          status,
          note
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?, ?, 'pending', ?)`,
+       VALUES (?, ?, ?, ?, 'pending', ?)`,
     ).bind(
       tournament.id,
       body.user_id,
       snapshot.aoeId,
       snapshot.aoeName,
-      snapshot.signupRating,
-      snapshot.signupMaxRating,
-      snapshot.signupTeamRating,
-      snapshot.signupTeamMaxRating,
-      snapshot.currentRating,
-      snapshot.currentMaxRating,
-      snapshot.currentTeamRating,
-      snapshot.currentTeamMaxRating,
-      snapshot.totalGames,
-      snapshot.recentGames,
       body.note?.trim() || null,
     ).run();
+
+    registrationId = Number(insertResult.meta.last_row_id);
   } else {
     await c.env.DB.prepare(
       `UPDATE tournament_registrations
        SET aoe_id = ?,
            aoe_name = ?,
-           signup_rating = ?,
-           signup_max_rating = ?,
-           signup_team_rating = ?,
-           signup_max_team_rating = ?,
-           current_rating = ?,
-           current_max_rating = ?,
-           current_team_rating = ?,
-           current_max_team_rating = ?,
-           current_data_fetched_at = datetime('now'),
-           total_games = ?,
-           recent_games = ?,
            status = 'pending',
            submitted_at = datetime('now'),
            updated_at = datetime('now'),
@@ -918,38 +1029,25 @@ tournaments.post('/:slug/registrations', requireUser, withTournamentBySlug, with
     ).bind(
       snapshot.aoeId,
       snapshot.aoeName,
-      snapshot.signupRating,
-      snapshot.signupMaxRating,
-      snapshot.signupTeamRating,
-      snapshot.signupTeamMaxRating,
-      snapshot.currentRating,
-      snapshot.currentMaxRating,
-      snapshot.currentTeamRating,
-      snapshot.currentTeamMaxRating,
-      snapshot.totalGames,
-      snapshot.recentGames,
       body.note?.trim() || null,
       tournament.id,
       body.user_id,
     ).run();
+
+    registrationId = existing.id;
   }
+
+  await upsertPlayerStatistics(c, {
+    registrationId,
+    snapshot,
+  });
 
   const registration = await getRegistrationByUserId(c, tournament.id, body.user_id);
   if (!registration) {
     httpError(500, 'Failed to load registration after save');
   }
 
-  const row = await c.env.DB.prepare(
-    `SELECT tr.*,
-            u.discord_id,
-            u.discord_name,
-            u.display_name,
-            u.avatar
-     FROM tournament_registrations tr
-     JOIN users u ON u.id = tr.user_id
-     WHERE tr.tournament_id = ? AND tr.user_id = ?
-     LIMIT 1`,
-  ).bind(tournament.id, body.user_id).first();
+  const row = await getStaffRegistrationRowByUserId(c, tournament.id, body.user_id);
 
   return c.json(
     {
@@ -973,10 +1071,12 @@ tournaments.post('/:slug/registrations/refresh', requireUser, withTournamentBySl
   }
 
   const rows = await c.env.DB.prepare(
-    `SELECT *
-     FROM tournament_registrations
-     WHERE tournament_id = ?
-     ORDER BY user_id ASC`,
+    `SELECT tr.*,
+            ${REGISTRATION_STATS_SELECT}
+     FROM tournament_registrations tr
+     LEFT JOIN player_statistics ps ON ps.registration_id = tr.id
+     WHERE tr.tournament_id = ?
+     ORDER BY tr.user_id ASC`,
   ).bind(tournament.id).all();
 
   const registrations = (rows.results ?? []) as TournamentRegistrationRow[];
@@ -987,42 +1087,28 @@ tournaments.post('/:slug/registrations/refresh', requireUser, withTournamentBySl
       tournament.recent_games_days as number,
     );
 
-    await c.env.DB.prepare(
-      `UPDATE tournament_registrations
-       SET current_rating = ?,
-           current_max_rating = ?,
-           current_team_rating = ?,
-           current_max_team_rating = ?,
-           current_data_fetched_at = datetime('now'),
-           total_games = ?,
-           recent_games = ?
-       WHERE tournament_id = ? AND user_id = ?`,
-    ).bind(
-      snapshot.currentRating,
-      snapshot.currentMaxRating,
-      snapshot.currentTeamRating,
-      snapshot.currentTeamMaxRating,
-      snapshot.totalGames,
-      snapshot.recentGames,
-      tournament.id,
-      registration.user_id,
-    ).run();
+    await upsertPlayerStatistics(c, {
+      registrationId: registration.id,
+      snapshot,
+    });
   }
 
   const updatedRows = await c.env.DB.prepare(
     `SELECT tr.*,
+            ${REGISTRATION_STATS_SELECT},
             u.discord_id,
             u.discord_name,
             u.display_name,
             u.avatar
      FROM tournament_registrations tr
+     LEFT JOIN player_statistics ps ON ps.registration_id = tr.id
      JOIN users u ON u.id = tr.user_id
      WHERE tr.tournament_id = ?
      ORDER BY
-       (tr.current_rating IS NULL) ASC,
-       tr.current_rating DESC,
-       (tr.current_max_rating IS NULL) ASC,
-       tr.current_max_rating DESC,
+       (ps.current_rating IS NULL) ASC,
+       ps.current_rating DESC,
+       (ps.current_max_rating IS NULL) ASC,
+       ps.current_max_rating DESC,
        tr.user_id ASC`,
   ).bind(tournament.id).all();
 
@@ -1059,38 +1145,12 @@ tournaments.post('/:slug/registrations/:userId/refresh', requireUser, withTourna
     tournament.recent_games_days as number,
   );
 
-  await c.env.DB.prepare(
-    `UPDATE tournament_registrations
-     SET current_rating = ?,
-         current_max_rating = ?,
-         current_team_rating = ?,
-         current_max_team_rating = ?,
-         current_data_fetched_at = datetime('now'),
-         total_games = ?,
-         recent_games = ?
-     WHERE tournament_id = ? AND user_id = ?`,
-  ).bind(
-    snapshot.currentRating,
-    snapshot.currentMaxRating,
-    snapshot.currentTeamRating,
-    snapshot.currentTeamMaxRating,
-    snapshot.totalGames,
-    snapshot.recentGames,
-    tournament.id,
-    userId,
-  ).run();
+  await upsertPlayerStatistics(c, {
+    registrationId: existing.id,
+    snapshot,
+  });
 
-  const updated = await c.env.DB.prepare(
-    `SELECT tr.*,
-            u.discord_id,
-            u.discord_name,
-            u.display_name,
-            u.avatar
-     FROM tournament_registrations tr
-     JOIN users u ON u.id = tr.user_id
-     WHERE tr.tournament_id = ? AND tr.user_id = ?
-     LIMIT 1`,
-  ).bind(tournament.id, userId).first();
+  const updated = await getStaffRegistrationRowByUserId(c, tournament.id, userId);
 
   return c.json({
     ok: true,
@@ -1131,17 +1191,7 @@ tournaments.post('/:slug/registrations/:userId/review', requireUser, withTournam
     userId,
   ).run();
 
-  const updated = await c.env.DB.prepare(
-    `SELECT tr.*,
-            u.discord_id,
-            u.discord_name,
-            u.display_name,
-            u.avatar
-     FROM tournament_registrations tr
-     JOIN users u ON u.id = tr.user_id
-     WHERE tr.tournament_id = ? AND tr.user_id = ?
-     LIMIT 1`,
-  ).bind(tournament.id, userId).first();
+  const updated = await getStaffRegistrationRowByUserId(c, tournament.id, userId);
 
   return c.json({
     ok: true,
@@ -1210,10 +1260,17 @@ tournaments.get('/:slug/players', optionalUser, withTournamentBySlug, async (c) 
   const t = c.get('tournament')!;
 
   const rows = await c.env.DB.prepare(
-    `SELECT tp.*, u.discord_id, u.discord_name, u.display_name, u.avatar, d.name as division_name
+    `SELECT tp.*,
+            u.discord_id, u.discord_name, u.display_name, u.avatar,
+            d.name as division_name,
+            ps.signup_rating, ps.signup_max_rating, ps.signup_team_rating, ps.signup_max_team_rating,
+            ps.current_rating, ps.current_max_rating, ps.current_team_rating, ps.current_max_team_rating,
+            ps.activation_rating, ps.activation_max_rating, ps.activation_team_rating, ps.activation_max_team_rating,
+            ps.total_games, ps.recent_games, ps.current_data_fetched_at
      FROM tournament_players tp
      JOIN users u ON u.id = tp.user_id
      LEFT JOIN divisions d ON d.id = tp.division_id
+     LEFT JOIN player_statistics ps ON ps.player_id = tp.id
      WHERE tp.tournament_id = ?
      ORDER BY tp.id ASC`,
   ).bind(t.id).all();
@@ -1227,10 +1284,17 @@ tournaments.get('/:slug/players/:playerId', optionalUser, withTournamentBySlug, 
   if (!Number.isInteger(playerId) || playerId <= 0) httpError(400, 'Invalid player id');
 
   const row = await c.env.DB.prepare(
-    `SELECT tp.*, u.discord_id, u.discord_name, u.display_name, u.avatar, d.name as division_name
+    `SELECT tp.*,
+            u.discord_id, u.discord_name, u.display_name, u.avatar,
+            d.name as division_name,
+            ps.signup_rating, ps.signup_max_rating, ps.signup_team_rating, ps.signup_max_team_rating,
+            ps.current_rating, ps.current_max_rating, ps.current_team_rating, ps.current_max_team_rating,
+            ps.activation_rating, ps.activation_max_rating, ps.activation_team_rating, ps.activation_max_team_rating,
+            ps.total_games, ps.recent_games, ps.current_data_fetched_at
      FROM tournament_players tp
      JOIN users u ON u.id = tp.user_id
      LEFT JOIN divisions d ON d.id = tp.division_id
+     LEFT JOIN player_statistics ps ON ps.player_id = tp.id
      WHERE tp.id = ? AND tp.tournament_id = ? LIMIT 1`,
   ).bind(playerId, t.id).first();
   if (!row) httpError(404, 'Tournament player not found');
@@ -1238,29 +1302,22 @@ tournaments.get('/:slug/players/:playerId', optionalUser, withTournamentBySlug, 
   return c.json({ player: row });
 });
 
-tournaments.post('/:slug/players', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('player.register'), async (c) => {
+tournaments.post('/:slug/players', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('player.manage'), async (c) => {
   const t = c.get('tournament')!;
-  const user = c.get('user')!;
-  const body = await c.req.json<{ user_id?: number; division_id?: number | null; aoe_id?: string; seed?: number | null; status?: string }>();
-  if (!body.aoe_id) httpError(400, 'aoe_id is required');
-
-  const actingAsSelf = !body.user_id || body.user_id === user.id;
-  const userId = actingAsSelf ? user.id : body.user_id;
-  if (!actingAsSelf) {
-    const allowed = await can(c, 'player.manage');
-    if (!allowed) httpError(403, 'Forbidden');
-  }
+  const body = await c.req.json<{ user_id?: number; registration_id?: number | null; division_id?: number | null; aoe_id?: string; seed?: number | null; status?: string }>();
+  if (!body.user_id || !body.aoe_id) httpError(400, 'user_id and aoe_id are required');
 
   await c.env.DB.prepare(
-    `INSERT INTO tournament_players (tournament_id, user_id, division_id, aoe_id, seed, status)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO tournament_players (tournament_id, user_id, registration_id, division_id, aoe_id, seed, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
   ).bind(
     t.id,
-    userId,
+    body.user_id,
+    body.registration_id ?? null,
     body.division_id ?? null,
     body.aoe_id,
     body.seed ?? null,
-    actingAsSelf ? 'pending' : (body.status ?? 'active'),
+    body.status ?? 'active',
   ).run();
 
   return c.json({ ok: true }, 201);
@@ -1270,13 +1327,14 @@ tournaments.put('/:slug/players/:playerId', requireUser, withTournamentBySlug, w
   const t = c.get('tournament')!;
   const playerId = Number(c.req.param('playerId'));
   if (!Number.isInteger(playerId) || playerId <= 0) httpError(400, 'Invalid player id');
-  const body = await c.req.json<{ division_id?: number | null; seed?: number | null; status?: string; aoe_id?: string }>();
+  const body = await c.req.json<{ registration_id?: number | null; division_id?: number | null; seed?: number | null; status?: string; aoe_id?: string }>();
 
   await c.env.DB.prepare(
     `UPDATE tournament_players
-     SET division_id = ?, seed = ?, status = coalesce(?, status), aoe_id = coalesce(?, aoe_id)
+     SET registration_id = ?, division_id = ?, seed = ?, status = coalesce(?, status), aoe_id = coalesce(?, aoe_id)
      WHERE id = ? AND tournament_id = ?`,
   ).bind(
+    body.registration_id ?? null,
     body.division_id ?? null,
     body.seed ?? null,
     body.status ?? null,
@@ -1305,7 +1363,7 @@ tournaments.get('/:slug/matches', optionalUser, withTournamentBySlug, async (c) 
   const t = c.get('tournament')!;
   const divisionId = c.req.query('divisionId');
   const week = c.req.query('week');
-  const state = c.req.query('state');
+  const status = c.req.query('status');
 
   let sql = `SELECT * FROM matches WHERE tournament_id = ?`;
   const params: (string | number)[] = [t.id];
@@ -1317,9 +1375,9 @@ tournaments.get('/:slug/matches', optionalUser, withTournamentBySlug, async (c) 
     sql += ` AND week_number = ?`;
     params.push(Number(week));
   }
-  if (state) {
-    sql += ` AND state = ?`;
-    params.push(state);
+  if (status) {
+    sql += ` AND status = ?`;
+    params.push(status);
   }
   sql += ` ORDER BY coalesce(week_number, 0), id`;
   const rows = await c.env.DB.prepare(sql).bind(...params).all();
@@ -1340,13 +1398,13 @@ tournaments.get('/:slug/matches/:matchId', optionalUser, withTournamentBySlug, a
 
 tournaments.post('/:slug/matches', requireUser, withTournamentBySlug, withTournamentAccess, requirePermission('match.manage'), async (c) => {
   const t = c.get('tournament')!;
-  const body = await c.req.json<{ division_id?: number; stage?: string; round_number?: number | null; week_number?: number | null; player1_id?: number; player2_id?: number; scheduled_for?: string | null; state?: string }>();
+  const body = await c.req.json<{ division_id?: number; stage?: string; round_number?: number | null; week_number?: number | null; player1_id?: number; player2_id?: number; scheduled_for?: string | null; status?: string }>();
   if (!body.division_id || !body.player1_id || !body.player2_id) {
     httpError(400, 'division_id, player1_id and player2_id are required');
   }
 
   await c.env.DB.prepare(
-    `INSERT INTO matches (tournament_id, division_id, stage, round_number, week_number, player1_id, player2_id, scheduled_for, state)
+    `INSERT INTO matches (tournament_id, division_id, stage, round_number, week_number, player1_id, player2_id, scheduled_for, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).bind(
     t.id,
@@ -1357,7 +1415,7 @@ tournaments.post('/:slug/matches', requireUser, withTournamentBySlug, withTourna
     body.player1_id,
     body.player2_id,
     body.scheduled_for ?? null,
-    body.state ?? 'created',
+    body.status ?? 'created',
   ).run();
 
   return c.json({ ok: true }, 201);
@@ -1367,7 +1425,7 @@ tournaments.put('/:slug/matches/:matchId', requireUser, withTournamentBySlug, wi
   const t = c.get('tournament')!;
   const matchId = Number(c.req.param('matchId'));
   if (!Number.isInteger(matchId) || matchId <= 0) httpError(400, 'Invalid match id');
-  const body = await c.req.json<{ scheduled_for?: string | null; state?: string; player1_points?: number; player2_points?: number; played_on?: string | null }>();
+  const body = await c.req.json<{ scheduled_for?: string | null; status?: string; player1_points?: number; player2_points?: number; played_on?: string | null }>();
 
   const canManage = await can(c, 'match.manage');
   const canScheduleOwn = await can(c, 'match.schedule.own', { matchId });
@@ -1378,12 +1436,12 @@ tournaments.put('/:slug/matches/:matchId', requireUser, withTournamentBySlug, wi
   if (canManage) {
     await c.env.DB.prepare(
       `UPDATE matches
-       SET scheduled_for = ?, state = coalesce(?, state), player1_points = coalesce(?, player1_points),
+       SET scheduled_for = ?, status = coalesce(?, status), player1_points = coalesce(?, player1_points),
            player2_points = coalesce(?, player2_points), played_on = ?
        WHERE id = ? AND tournament_id = ?`,
     ).bind(
       body.scheduled_for ?? null,
-      body.state ?? null,
+      body.status ?? null,
       body.player1_points ?? null,
       body.player2_points ?? null,
       body.played_on ?? null,
@@ -1392,10 +1450,10 @@ tournaments.put('/:slug/matches/:matchId', requireUser, withTournamentBySlug, wi
     ).run();
   } else {
     await c.env.DB.prepare(
-      `UPDATE matches SET scheduled_for = ?, state = coalesce(?, state) WHERE id = ? AND tournament_id = ?`,
+      `UPDATE matches SET scheduled_for = ?, status = coalesce(?, status) WHERE id = ? AND tournament_id = ?`,
     ).bind(
       body.scheduled_for ?? null,
-      body.state ?? null,
+      body.status ?? null,
       matchId,
       t.id,
     ).run();
