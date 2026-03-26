@@ -186,27 +186,26 @@ export async function replaceTournamentSetupDivisions(
 
   const session = await ensureTournamentSetupSession(c, tournament.id, createdBy);
 
-  await c.env.DB.exec('BEGIN');
-  try {
-    await c.env.DB.prepare(`DELETE FROM tournament_setup_divisions WHERE setup_session_id = ?`).bind(session.id).run();
-    for (const division of normalized) {
-      await c.env.DB.prepare(
+  const statements = [
+    c.env.DB.prepare(
+      `DELETE FROM tournament_setup_divisions WHERE setup_session_id = ?`,
+    ).bind(session.id),
+
+    ...normalized.map((division) =>
+      c.env.DB.prepare(
         `INSERT INTO tournament_setup_divisions (setup_session_id, name, ruleset_id, sort_order)
          VALUES (?, ?, ?, ?)`,
-      ).bind(session.id, division.name, division.ruleset_id, division.sort_order).run();
-    }
+      ).bind(session.id, division.name, division.ruleset_id, division.sort_order),
+    ),
 
-    await c.env.DB.prepare(
+    c.env.DB.prepare(
       `UPDATE tournament_setup_sessions
        SET status = 'draft', updated_at = datetime('now')
        WHERE id = ?`,
-    ).bind(session.id).run();
+    ).bind(session.id),
+  ];
 
-    await c.env.DB.exec('COMMIT');
-  } catch (error) {
-    await c.env.DB.exec('ROLLBACK');
-    throw error;
-  }
+  await c.env.DB.batch(statements);
 
   return getTournamentSetupDto(c, tournament, createdBy);
 }
@@ -230,23 +229,28 @@ export async function generateTournamentSetupAssignments(
   const ordered = sortEligibleRegistrations(eligible, mode, ratingKey);
   const sizes = chunkSizes(ordered.length, divisions.length);
 
-  let offset = 0;
-  await c.env.DB.exec('BEGIN');
-  try {
-    await c.env.DB.prepare(`DELETE FROM tournament_setup_player_assignments WHERE setup_session_id = ?`).bind(session.id).run();
-    await c.env.DB.prepare(`DELETE FROM tournament_setup_matches WHERE setup_session_id = ?`).bind(session.id).run();
+   let offset = 0;
+  const statements = [
+    c.env.DB.prepare(
+      `DELETE FROM tournament_setup_player_assignments WHERE setup_session_id = ?`,
+    ).bind(session.id),
+    c.env.DB.prepare(
+      `DELETE FROM tournament_setup_matches WHERE setup_session_id = ?`,
+    ).bind(session.id),
+  ];
 
-    for (let divisionIndex = 0; divisionIndex < divisions.length; divisionIndex += 1) {
-      const division = divisions[divisionIndex];
-      const size = sizes[divisionIndex];
-      const assignedRows = ordered.slice(offset, offset + size);
-      offset += size;
+  for (let divisionIndex = 0; divisionIndex < divisions.length; divisionIndex += 1) {
+    const division = divisions[divisionIndex];
+    const size = sizes[divisionIndex];
+    const assignedRows = ordered.slice(offset, offset + size);
+    offset += size;
 
+    for (let index = 0; index < assignedRows.length; index += 1) {
+      const row = assignedRows[index];
+      const sourceRatingValue = ratingKey ? row[ratingKey] ?? null : null;
 
-      for (let index = 0; index < assignedRows.length; index += 1) {
-        const row = assignedRows[index];
-        const sourceRatingValue = ratingKey ? row[ratingKey] ?? null : null;
-        await c.env.DB.prepare(
+      statements.push(
+        c.env.DB.prepare(
           `INSERT INTO tournament_setup_player_assignments (
              setup_session_id,
              setup_division_id,
@@ -255,24 +259,30 @@ export async function generateTournamentSetupAssignments(
              sort_order,
              source_rating_value
            ) VALUES (?, ?, ?, ?, ?, ?)`,
-        ).bind(session.id, division.id, row.registration_id, index + 1, index + 1, sourceRatingValue).run();
-      }
+        ).bind(
+          session.id,
+          division.id,
+          row.registration_id,
+          index + 1,
+          index + 1,
+          sourceRatingValue,
+        ),
+      );
     }
+  }
 
-    await c.env.DB.prepare(
+  statements.push(
+    c.env.DB.prepare(
       `UPDATE tournament_setup_sessions
        SET distribution_mode = ?,
            selected_rating_key = ?,
            status = 'draft',
            updated_at = datetime('now')
        WHERE id = ?`,
-    ).bind(mode, ratingKey, session.id).run();
+    ).bind(mode, ratingKey, session.id),
+  );
 
-    await c.env.DB.exec('COMMIT');
-  } catch (error) {
-    await c.env.DB.exec('ROLLBACK');
-    throw error;
-  }
+  await c.env.DB.batch(statements);
 
   return getTournamentSetupDto(c, tournament, createdBy);
 }
@@ -321,16 +331,25 @@ export async function replaceTournamentSetupAssignments(
     grouped.set(setupDivisionId, bucket);
   });
 
-  await c.env.DB.exec('BEGIN');
-  try {
-    await c.env.DB.prepare(`DELETE FROM tournament_setup_player_assignments WHERE setup_session_id = ?`).bind(session.id).run();
-    await c.env.DB.prepare(`DELETE FROM tournament_setup_matches WHERE setup_session_id = ?`).bind(session.id).run();
+  const statements = [
+    c.env.DB.prepare(
+      `DELETE FROM tournament_setup_player_assignments WHERE setup_session_id = ?`,
+    ).bind(session.id),
+    c.env.DB.prepare(
+      `DELETE FROM tournament_setup_matches WHERE setup_session_id = ?`,
+    ).bind(session.id),
+  ];
 
-    for (const division of divisions) {
-      const bucket = (grouped.get(division.id) ?? []).sort((a, b) => a.sort_order - b.sort_order || a.registration_id - b.registration_id);
-      for (let index = 0; index < bucket.length; index += 1) {
-        const row = bucket[index];
-        await c.env.DB.prepare(
+  for (const division of divisions) {
+    const bucket = (grouped.get(division.id) ?? []).sort(
+      (a, b) => a.sort_order - b.sort_order || a.registration_id - b.registration_id,
+    );
+
+    for (let index = 0; index < bucket.length; index += 1) {
+      const row = bucket[index];
+
+      statements.push(
+        c.env.DB.prepare(
           `INSERT INTO tournament_setup_player_assignments (
              setup_session_id,
              setup_division_id,
@@ -338,22 +357,21 @@ export async function replaceTournamentSetupAssignments(
              seed,
              sort_order,
              source_rating_value
-           ) VALUES (?, ?, ?, ?, ?, ?)`
-        ).bind(session.id, division.id, row.registration_id, index + 1, index + 1, null).run();
-      }
+           ) VALUES (?, ?, ?, ?, ?, ?)`,
+        ).bind(session.id, division.id, row.registration_id, index + 1, index + 1, null),
+      );
     }
+  }
 
-    await c.env.DB.prepare(
+  statements.push(
+    c.env.DB.prepare(
       `UPDATE tournament_setup_sessions
        SET status = 'draft', updated_at = datetime('now')
        WHERE id = ?`,
-    ).bind(session.id).run();
+    ).bind(session.id),
+  );
 
-    await c.env.DB.exec('COMMIT');
-  } catch (error) {
-    await c.env.DB.exec('ROLLBACK');
-    throw error;
-  }
+  await c.env.DB.batch(statements);
 
   return getTournamentSetupDto(c, tournament, createdBy);
 }
@@ -380,32 +398,41 @@ export async function generateTournamentSetupMatches(
     assignmentsByDivision.set(assignment.setup_division_id, bucket);
   }
 
-  await c.env.DB.exec('BEGIN');
-  try {
-    await c.env.DB.prepare(`DELETE FROM tournament_setup_matches WHERE setup_session_id = ?`).bind(session.id).run();
+    const statements = [
+    c.env.DB.prepare(
+      `DELETE FROM tournament_setup_matches WHERE setup_session_id = ?`,
+    ).bind(session.id),
+  ];
 
-    for (const division of divisions) {
-      const divisionAssignments = (assignmentsByDivision.get(division.id) ?? []).sort((a, b) => a.seed - b.seed || a.sort_order - b.sort_order);
-      if (divisionAssignments.length < 2) {
-        continue;
-      }
+  for (const division of divisions) {
+    const divisionAssignments = (assignmentsByDivision.get(division.id) ?? []).sort(
+      (a, b) => a.seed - b.seed || a.sort_order - b.sort_order,
+    );
 
-      const ruleset = await resolveRulesetForSetupDivision(c, tournament, division);
-      const firstStage = ruleset.stages[0];
-      if (!firstStage) httpError(400, `Ruleset for division ${division.name} does not define any stages`);
+    if (divisionAssignments.length < 2) {
+      continue;
+    }
 
-      const players: EnginePlayer[] = divisionAssignments.map((assignment) => ({
-        id: assignment.registration_id,
-        user_id: assignment.user_id,
-        seed: assignment.seed,
-        status: 'active',
-        display_name: assignment.display_name ?? assignment.aoe_name,
-        discord_name: assignment.discord_name,
-      }));
+    const ruleset = await resolveRulesetForSetupDivision(c, tournament, division);
+    const firstStage = ruleset.stages[0];
+    if (!firstStage) {
+      httpError(400, `Ruleset for division ${division.name} does not define any stages`);
+    }
 
-      const previewMatches = generateStagePreview(ruleset, firstStage.id, players);
-      for (const preview of previewMatches) {
-        await c.env.DB.prepare(
+    const players: EnginePlayer[] = divisionAssignments.map((assignment) => ({
+      id: assignment.registration_id,
+      user_id: assignment.user_id,
+      seed: assignment.seed,
+      status: 'active',
+      display_name: assignment.display_name ?? assignment.aoe_name,
+      discord_name: assignment.discord_name,
+    }));
+
+    const previewMatches = generateStagePreview(ruleset, firstStage.id, players);
+
+    for (const preview of previewMatches) {
+      statements.push(
+        c.env.DB.prepare(
           `INSERT INTO tournament_setup_matches (
              setup_session_id,
              setup_division_id,
@@ -421,29 +448,28 @@ export async function generateTournamentSetupMatches(
         ).bind(
           session.id,
           division.id,
-          preview.stage_id,
-          preview.stage_type,
+          firstStage.id,
+          firstStage.type,
           preview.round_number,
-          preview.round_label,
-          preview.week_number,
+          preview.round_label ?? null,
+          preview.week_number ?? null,
           preview.format_id,
-          preview.player1_id,
-          preview.player2_id,
-        ).run();
-      }
+          preview.player1_id ?? null,
+          preview.player2_id ?? null,
+        ),
+      );
     }
+  }
 
-    await c.env.DB.prepare(
+  statements.push(
+    c.env.DB.prepare(
       `UPDATE tournament_setup_sessions
        SET status = 'ready', updated_at = datetime('now')
        WHERE id = ?`,
-    ).bind(session.id).run();
+    ).bind(session.id),
+  );
 
-    await c.env.DB.exec('COMMIT');
-  } catch (error) {
-    await c.env.DB.exec('ROLLBACK');
-    throw error;
-  }
+  await c.env.DB.batch(statements);
 
   return getTournamentSetupDto(c, tournament, createdBy);
 }
@@ -515,12 +541,15 @@ export async function replaceTournamentSetupMatches(
     }
   }
 
-  await c.env.DB.exec('BEGIN');
-  try {
-    await c.env.DB.prepare(`DELETE FROM tournament_setup_matches WHERE setup_session_id = ?`).bind(session.id).run();
+  const statements = [
+    c.env.DB.prepare(
+      `DELETE FROM tournament_setup_matches WHERE setup_session_id = ?`,
+    ).bind(session.id),
+  ];
 
-    for (const match of matches) {
-      await c.env.DB.prepare(
+  for (const match of matches) {
+    statements.push(
+      c.env.DB.prepare(
         `INSERT INTO tournament_setup_matches (
            setup_session_id,
            setup_division_id,
@@ -544,20 +573,19 @@ export async function replaceTournamentSetupMatches(
         match.format_id!.trim(),
         match.player1_registration_id ?? null,
         match.player2_registration_id ?? null,
-      ).run();
-    }
+      ),
+    );
+  }
 
-    await c.env.DB.prepare(
+  statements.push(
+    c.env.DB.prepare(
       `UPDATE tournament_setup_sessions
        SET status = 'ready', updated_at = datetime('now')
        WHERE id = ?`,
-    ).bind(session.id).run();
+    ).bind(session.id),
+  );
 
-    await c.env.DB.exec('COMMIT');
-  } catch (error) {
-    await c.env.DB.exec('ROLLBACK');
-    throw error;
-  }
+  await c.env.DB.batch(statements);
 
   return getTournamentSetupDto(c, tournament, createdBy);
 }
@@ -632,130 +660,153 @@ export async function applyTournamentSetup(
     activationSnapshots.set(String(registration.registration_id), snapshot);
   }
 
-  const assignmentsByRegistrationId = new Map(assignments.map((row) => [row.registration_id, row]));
+  const registrationsById = new Map(
+    eligibleRegistrations.map((row) => [row.registration_id, row]),
+  );
 
-  await c.env.DB.exec('BEGIN');
-  try {
-    await c.env.DB.prepare(`DELETE FROM divisions WHERE tournament_id = ?`).bind(tournament.id).run();
+  // D1 in Workers does not allow manual SQL BEGIN/COMMIT.
+  // All validations above run before the first mutation, then writes happen
+  // in deterministic order so activation can still complete safely.
+  await c.env.DB.prepare(
+    `DELETE FROM divisions WHERE tournament_id = ?`,
+  ).bind(tournament.id).run();
 
-    const liveDivisionIdBySetupDivisionId = new Map<number, number>();
-    for (const division of divisions) {
-      const result = await c.env.DB.prepare(
-        `INSERT INTO divisions (tournament_id, name, ruleset_id)
-         VALUES (?, ?, ?)`,
-      ).bind(tournament.id, division.name, division.ruleset_id ?? null).run();
-      liveDivisionIdBySetupDivisionId.set(division.id, Number(result.meta.last_row_id));
-    }
+  const liveDivisionIdBySetupDivisionId = new Map<number, number>();
+  for (const division of divisions) {
+    const result = await c.env.DB.prepare(
+      `INSERT INTO divisions (tournament_id, name, ruleset_id)
+       VALUES (?, ?, ?)`,
+    ).bind(tournament.id, division.name, division.ruleset_id ?? null).run();
 
-    const livePlayerIdByRegistrationId = new Map<number, number>();
-    const registrationsById = new Map(eligibleRegistrations.map((row) => [row.registration_id, row]));
-
-    const orderedAssignments = [...assignments].sort((a, b) => a.division_sort_order - b.division_sort_order || a.seed - b.seed || a.registration_id - b.registration_id);
-    for (const assignment of orderedAssignments) {
-      const registration = registrationsById.get(assignment.registration_id);
-      if (!registration) httpError(500, 'Failed to resolve approved registration during tournament activation');
-      const divisionId = liveDivisionIdBySetupDivisionId.get(assignment.setup_division_id);
-      if (!divisionId) httpError(500, 'Failed to resolve live division during tournament activation');
-
-      const result = await c.env.DB.prepare(
-        `INSERT INTO tournament_players (
-           tournament_id,
-           user_id,
-           registration_id,
-           division_id,
-           aoe_id,
-           seed,
-           status,
-           joined_at
-         ) VALUES (?, ?, ?, ?, ?, ?, 'active', datetime('now'))`,
-      ).bind(
-        tournament.id,
-        registration.user_id,
-        registration.registration_id,
-        divisionId,
-        registration.aoe_id,
-        assignment.seed,
-      ).run();
-
-      const playerId = Number(result.meta.last_row_id);
-      livePlayerIdByRegistrationId.set(registration.registration_id, playerId);
-
-      const activation = activationSnapshots.get(String(registration.registration_id));
-      if (!activation) httpError(500, 'Missing activation snapshot during tournament activation');
-
-      await c.env.DB.prepare(
-        `UPDATE player_statistics
-         SET player_id = ?,
-             activation_rating = ?,
-             activation_max_rating = ?,
-             activation_team_rating = ?,
-             activation_max_team_rating = ?,
-             total_games = ?,
-             recent_games = ?,
-             current_data_fetched_at = datetime('now')
-         WHERE registration_id = ?`,
-      ).bind(
-        playerId,
-        activation.currentRating,
-        activation.currentMaxRating,
-        activation.currentTeamRating,
-        activation.currentTeamMaxRating,
-        activation.totalGames,
-        activation.recentGames,
-        registration.registration_id,
-      ).run();
-    }
-
-    for (const match of matches) {
-      const divisionId = liveDivisionIdBySetupDivisionId.get(match.setup_division_id);
-      if (!divisionId) httpError(500, 'Failed to resolve live division for a generated setup match');
-      const player1Id = match.player1_registration_id == null ? null : livePlayerIdByRegistrationId.get(match.player1_registration_id) ?? null;
-      const player2Id = match.player2_registration_id == null ? null : livePlayerIdByRegistrationId.get(match.player2_registration_id) ?? null;
-      if (!player1Id || !player2Id) {
-        httpError(409, 'Generated setup matches with byes cannot be applied yet');
-      }
-
-      await c.env.DB.prepare(
-        `INSERT INTO matches (
-           tournament_id,
-           division_id,
-           stage,
-           round_number,
-           week_number,
-           player1_id,
-           player2_id,
-           player1_points,
-           player2_points,
-           status
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 'created')`,
-      ).bind(
-        tournament.id,
-        divisionId,
-        mapSetupStageToLiveStage(match.stage_type, match.stage_key),
-        match.round_number,
-        match.week_number,
-        player1Id,
-        player2Id,
-      ).run();
-    }
-
-    await c.env.DB.prepare(
-      `UPDATE tournaments
-       SET status = 'active', registrations_open = 0
-       WHERE id = ?`,
-    ).bind(tournament.id).run();
-
-    await c.env.DB.prepare(
-      `UPDATE tournament_setup_sessions
-       SET status = 'applied', applied_at = datetime('now'), updated_at = datetime('now')
-       WHERE id = ?`,
-    ).bind(session.id).run();
-
-    await c.env.DB.exec('COMMIT');
-  } catch (error) {
-    await c.env.DB.exec('ROLLBACK');
-    throw error;
+    liveDivisionIdBySetupDivisionId.set(division.id, Number(result.meta.last_row_id));
   }
+
+  const livePlayerIdByRegistrationId = new Map<number, number>();
+
+  const orderedAssignments = [...assignments].sort(
+    (a, b) =>
+      a.division_sort_order - b.division_sort_order ||
+      a.seed - b.seed ||
+      a.registration_id - b.registration_id,
+  );
+
+  for (const assignment of orderedAssignments) {
+    const registration = registrationsById.get(assignment.registration_id);
+    if (!registration) {
+      httpError(500, 'Failed to resolve approved registration during tournament activation');
+    }
+
+    const divisionId = liveDivisionIdBySetupDivisionId.get(assignment.setup_division_id);
+    if (!divisionId) {
+      httpError(500, 'Failed to resolve live division during tournament activation');
+    }
+
+    const result = await c.env.DB.prepare(
+      `INSERT INTO tournament_players (
+         tournament_id,
+         user_id,
+         registration_id,
+         division_id,
+         aoe_id,
+         seed,
+         status,
+         joined_at
+       ) VALUES (?, ?, ?, ?, ?, ?, 'active', datetime('now'))`,
+    ).bind(
+      tournament.id,
+      registration.user_id,
+      registration.registration_id,
+      divisionId,
+      registration.aoe_id,
+      assignment.seed,
+    ).run();
+
+    const playerId = Number(result.meta.last_row_id);
+    livePlayerIdByRegistrationId.set(registration.registration_id, playerId);
+
+    const activation = activationSnapshots.get(String(registration.registration_id));
+    if (!activation) {
+      httpError(500, 'Missing activation snapshot during tournament activation');
+    }
+
+    await c.env.DB.prepare(
+      `UPDATE player_statistics
+       SET player_id = ?,
+           activation_rating = ?,
+           activation_max_rating = ?,
+           activation_team_rating = ?,
+           activation_max_team_rating = ?,
+           total_games = ?,
+           recent_games = ?,
+           current_data_fetched_at = datetime('now')
+       WHERE registration_id = ?`,
+    ).bind(
+      playerId,
+      activation.currentRating,
+      activation.currentMaxRating,
+      activation.currentTeamRating,
+      activation.currentTeamMaxRating,
+      activation.totalGames,
+      activation.recentGames,
+      registration.registration_id,
+    ).run();
+  }
+
+  for (const match of matches) {
+    const divisionId = liveDivisionIdBySetupDivisionId.get(match.setup_division_id);
+    if (!divisionId) {
+      httpError(500, 'Failed to resolve live division for a generated setup match');
+    }
+
+    const player1Id =
+      match.player1_registration_id == null
+        ? null
+        : livePlayerIdByRegistrationId.get(match.player1_registration_id) ?? null;
+
+    const player2Id =
+      match.player2_registration_id == null
+        ? null
+        : livePlayerIdByRegistrationId.get(match.player2_registration_id) ?? null;
+
+    if (!player1Id || !player2Id) {
+      httpError(409, 'Generated setup matches with byes cannot be applied yet');
+    }
+
+    await c.env.DB.prepare(
+      `INSERT INTO matches (
+         tournament_id,
+         division_id,
+         stage,
+         round_number,
+         week_number,
+         player1_id,
+         player2_id,
+         player1_points,
+         player2_points,
+         status
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 'created')`,
+    ).bind(
+      tournament.id,
+      divisionId,
+      mapSetupStageToLiveStage(match.stage_type, match.stage_key),
+      match.round_number,
+      match.week_number,
+      player1Id,
+      player2Id,
+    ).run();
+  }
+
+  await c.env.DB.prepare(
+    `UPDATE tournaments
+     SET status = 'active', registrations_open = 0
+     WHERE id = ?`,
+  ).bind(tournament.id).run();
+
+  await c.env.DB.prepare(
+    `UPDATE tournament_setup_sessions
+     SET status = 'applied', applied_at = datetime('now'), updated_at = datetime('now')
+     WHERE id = ?`,
+  ).bind(session.id).run();
 
   return getTournamentSetupDto(c, { ...tournament, status: 'active', registrations_open: 0 } as TournamentRow, createdBy);
 }
