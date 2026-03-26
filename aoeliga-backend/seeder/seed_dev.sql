@@ -16,6 +16,7 @@ DELETE FROM tournament_setup_player_assignments;
 DELETE FROM tournament_setup_divisions;
 DELETE FROM tournament_setup_sessions;
 DELETE FROM tournament_players;
+DELETE FROM player_statistics;
 DELETE FROM tournament_registrations;
 DELETE FROM divisions;
 DELETE FROM rulesets;
@@ -31,6 +32,11 @@ WHERE name IN (
   'divisions',
   'tournament_registrations',
   'tournament_players',
+  'player_statistics',
+  'tournament_setup_sessions',
+  'tournament_setup_divisions',
+  'tournament_setup_player_assignments',
+  'tournament_setup_matches',
   'matches',
   'replays',
   'match_units',
@@ -233,17 +239,6 @@ INSERT INTO tournament_registrations (
   user_id,
   aoe_id,
   aoe_name,
-  signup_rating,
-  signup_max_rating,
-  signup_team_rating,
-  signup_max_team_rating,
-  current_rating,
-  current_max_rating,
-  current_team_rating,
-  current_max_team_rating,
-  total_games,
-  recent_games,
-  current_data_fetched_at,
   status,
   submitted_at,
   updated_at,
@@ -253,19 +248,19 @@ INSERT INTO tournament_registrations (
   note
 )
 VALUES
-  (1, 1, 1,  '2047125', 'Heltrosh',     1820, 1865, 1901, 1930, 1841, 1865, 1910, 1930, 980, 24, '2026-03-10 12:00:00', 'approved',  '2026-02-15 09:00:00', '2026-02-18 10:00:00', '2026-02-18 10:00:00', 1,  NULL, 'Returning top division player'),
-  (2, 1, 2,  '498754',  'Player Two',   1710, 1742, 1765, 1790, 1725, 1742, 1772, 1790, 840, 18, '2026-03-10 12:00:00', 'approved',  '2026-02-15 09:05:00', '2026-02-18 10:01:00', '2026-02-18 10:01:00', 1,  NULL, NULL),
-  (3, 1, 3,  '123456',  'Player Three', 1650, 1672, 1685, 1704, 1668, 1680, 1691, 1708, 765, 14, '2026-03-10 12:00:00', 'approved',  '2026-02-15 09:10:00', '2026-02-18 10:02:00', '2026-02-18 10:02:00', 10, NULL, NULL),
-  (4, 1, 4,  '234567',  'Player Four',  1588, 1604, 1620, 1640, 1592, 1609, 1628, 1642, 640, 12, '2026-03-10 12:00:00', 'approved',  '2026-02-15 09:15:00', '2026-02-18 10:03:00', '2026-02-18 10:03:00', 10, NULL, NULL),
+  (1, 1, 1,  '2047125', 'Heltrosh',     'approved', '2026-02-15 09:00:00', '2026-02-18 10:00:00', '2026-02-18 10:00:00', 1,  NULL, 'Returning top division player'),
+  (2, 1, 2,  '498754',  'Player Two',   'approved', '2026-02-15 09:05:00', '2026-02-18 10:01:00', '2026-02-18 10:01:00', 1,  NULL, NULL),
+  (3, 1, 3,  '123456',  'Player Three', 'approved', '2026-02-15 09:10:00', '2026-02-18 10:02:00', '2026-02-18 10:02:00', 10, NULL, NULL),
+  (4, 1, 4,  '234567',  'Player Four',  'approved', '2026-02-15 09:15:00', '2026-02-18 10:03:00', '2026-02-18 10:03:00', 10, NULL, NULL),
 
-  (5, 1, 5,  '345678',  'Player Five',  1505, 1524, 1540, 1560, 1519, 1528, 1549, 1568, 590, 11, '2026-03-10 12:00:00', 'approved',  '2026-02-15 09:20:00', '2026-02-18 10:04:00', '2026-02-18 10:04:00', 1,  NULL, NULL),
-  (6, 1, 6,  '456789',  'Player Six',   1440, 1461, 1480, 1498, 1455, 1468, 1487, 1504, 510, 10, '2026-03-10 12:00:00', 'approved',  '2026-02-15 09:25:00', '2026-02-18 10:05:00', '2026-02-18 10:05:00', 1,  NULL, NULL),
-  (7, 1, 7,  '567891',  'Player Seven', 1375, 1390, 1410, 1430, 1382, 1399, 1419, 1435, 455,  8, '2026-03-10 12:00:00', 'approved',  '2026-02-15 09:30:00', '2026-02-18 10:06:00', '2026-02-18 10:06:00', 10, NULL, NULL),
-  (8, 1, 8,  '678912',  'Player Eight', 1310, 1332, 1350, 1370, 1322, 1338, 1357, 1374, 401,  7, '2026-03-10 12:00:00', 'approved',  '2026-02-15 09:35:00', '2026-02-18 10:07:00', '2026-02-18 10:07:00', 10, NULL, NULL),
+  (5, 1, 5,  '345678',  'Player Five',  'approved', '2026-02-15 09:20:00', '2026-02-18 10:04:00', '2026-02-18 10:04:00', 1,  NULL, NULL),
+  (6, 1, 6,  '456789',  'Player Six',   'approved', '2026-02-15 09:25:00', '2026-02-18 10:05:00', '2026-02-18 10:05:00', 1,  NULL, NULL),
+  (7, 1, 7,  '567891',  'Player Seven', 'approved', '2026-02-15 09:30:00', '2026-02-18 10:06:00', '2026-02-18 10:06:00', 10, NULL, NULL),
+  (8, 1, 8,  '678912',  'Player Eight', 'approved', '2026-02-15 09:35:00', '2026-02-18 10:07:00', '2026-02-18 10:07:00', 10, NULL, NULL),
 
-  (9,  2, 11, '789123', 'Pending One',  1260, 1278, 1295, 1312, 1268, 1284, 1301, 1318, 350,  9, '2026-03-10 12:00:00', 'pending',   '2026-03-05 14:00:00', '2026-03-05 14:00:00', NULL, NULL, NULL, 'Wants to join if slots open'),
-  (10, 2, 12, '789124', 'Pending Two',  1198, 1210, 1235, 1250, 1204, 1218, 1241, 1256, 290,  5, '2026-03-10 12:00:00', 'pending',   '2026-03-06 15:00:00', '2026-03-06 15:00:00', NULL, NULL, NULL, NULL),
-  (11, 2, 13, '789125', 'Rejected One', 1100, 1114, 1140, 1152, 1100, 1114, 1140, 1152, 180,  2, '2026-03-10 12:00:00', 'rejected',  '2026-03-06 16:00:00', '2026-03-07 10:00:00', '2026-03-07 10:00:00', 1, 'Smurf suspicion in dev seed', 'Smurf suspicion in dev seed');
+  (9,  2, 11, '789123', 'Pending One',  'pending',  '2026-03-05 14:00:00', '2026-03-05 14:00:00', NULL, NULL, NULL, 'Wants to join if slots open'),
+  (10, 2, 12, '789124', 'Pending Two',  'pending',  '2026-03-06 15:00:00', '2026-03-06 15:00:00', NULL, NULL, NULL, NULL),
+  (11, 2, 13, '789125', 'Rejected One', 'rejected', '2026-03-06 16:00:00', '2026-03-07 10:00:00', '2026-03-07 10:00:00', 1, 'Smurf suspicion in dev seed', 'Smurf suspicion in dev seed');
 
 -- ============================================================
 -- TOURNAMENT PLAYERS
@@ -274,6 +269,7 @@ VALUES
 INSERT INTO tournament_players (
   id,
   tournament_id,
+  registration_id,
   user_id,
   division_id,
   seed,
@@ -282,15 +278,53 @@ INSERT INTO tournament_players (
   aoe_id
 )
 VALUES
-  (1, 1, 1, 1, 1, 'active', '2026-02-18 10:00:00', '2047125'),
-  (2, 1, 2, 1, 2, 'active', '2026-02-18 10:01:00', '498754'),
-  (3, 1, 3, 1, 3, 'active', '2026-02-18 10:02:00', '123456'),
-  (4, 1, 4, 1, 4, 'active', '2026-02-18 10:03:00', '234567'),
+  (1, 1, 1, 1, 1, 1, 'active', '2026-02-18 10:00:00', '2047125'),
+  (2, 1, 2, 2, 1, 2, 'active', '2026-02-18 10:01:00', '498754'),
+  (3, 1, 3, 3, 1, 3, 'active', '2026-02-18 10:02:00', '123456'),
+  (4, 1, 4, 4, 1, 4, 'active', '2026-02-18 10:03:00', '234567'),
 
-  (5, 1, 5, 2, 1, 'active', '2026-02-18 10:04:00', '345678'),
-  (6, 1, 6, 2, 2, 'active', '2026-02-18 10:05:00', '456789'),
-  (7, 1, 7, 2, 3, 'active', '2026-02-18 10:06:00', '567891'),
-  (8, 1, 8, 2, 4, 'active', '2026-02-18 10:07:00', '678912');
+  (5, 1, 5, 5, 2, 1, 'active', '2026-02-18 10:04:00', '345678'),
+  (6, 1, 6, 6, 2, 2, 'active', '2026-02-18 10:05:00', '456789'),
+  (7, 1, 7, 7, 2, 3, 'active', '2026-02-18 10:06:00', '567891'),
+  (8, 1, 8, 8, 2, 4, 'active', '2026-02-18 10:07:00', '678912');
+
+-- ============================================================
+-- PLAYER STATISTICS
+-- ============================================================
+INSERT INTO player_statistics (
+  id,
+  registration_id,
+  player_id,
+  signup_rating,
+  signup_max_rating,
+  signup_team_rating,
+  signup_max_team_rating,
+  current_rating,
+  current_max_rating,
+  current_team_rating,
+  current_max_team_rating,
+  activation_rating,
+  activation_max_rating,
+  activation_team_rating,
+  activation_max_team_rating,
+  total_games,
+  recent_games,
+  current_data_fetched_at
+)
+VALUES
+  (1, 1, 1, 1820, 1865, 1901, 1930, 1841, 1865, 1910, 1930, NULL, NULL, NULL, NULL, 980, 24, '2026-03-10 12:00:00'),
+  (2, 2, 2, 1710, 1742, 1765, 1790, 1725, 1742, 1772, 1790, NULL, NULL, NULL, NULL, 840, 18, '2026-03-10 12:00:00'),
+  (3, 3, 3, 1650, 1672, 1685, 1704, 1668, 1680, 1691, 1708, NULL, NULL, NULL, NULL, 765, 14, '2026-03-10 12:00:00'),
+  (4, 4, 4, 1588, 1604, 1620, 1640, 1592, 1609, 1628, 1642, NULL, NULL, NULL, NULL, 640, 12, '2026-03-10 12:00:00'),
+
+  (5, 5, 5, 1505, 1524, 1540, 1560, 1519, 1528, 1549, 1568, NULL, NULL, NULL, NULL, 590, 11, '2026-03-10 12:00:00'),
+  (6, 6, 6, 1440, 1461, 1480, 1498, 1455, 1468, 1487, 1504, NULL, NULL, NULL, NULL, 510, 10, '2026-03-10 12:00:00'),
+  (7, 7, 7, 1375, 1390, 1410, 1430, 1382, 1399, 1419, 1435, NULL, NULL, NULL, NULL, 455, 8,  '2026-03-10 12:00:00'),
+  (8, 8, 8, 1310, 1332, 1350, 1370, 1322, 1338, 1357, 1374, NULL, NULL, NULL, NULL, 401, 7,  '2026-03-10 12:00:00'),
+
+  (9,  9,  NULL, 1260, 1278, 1295, 1312, 1268, 1284, 1301, 1318, NULL, NULL, NULL, NULL, 350, 9, '2026-03-10 12:00:00'),
+  (10, 10, NULL, 1198, 1210, 1235, 1250, 1204, 1218, 1241, 1256, NULL, NULL, NULL, NULL, 290, 5, '2026-03-10 12:00:00'),
+  (11, 11, NULL, 1100, 1114, 1140, 1152, 1100, 1114, 1140, 1152, NULL, NULL, NULL, NULL, 180, 2, '2026-03-10 12:00:00');
 
 -- ============================================================
 -- MATCHES
@@ -325,64 +359,21 @@ VALUES
   (8, 1, 2, 'group', NULL, 2, 6, 8, 2, 0, '2026-03-12 18:00:00', 'forfeited',        '2026-03-12 18:30:00');
 
 -- ============================================================
--- REPLAYS
--- One parsed replay for match 1, one pending replay for match 3
--- ============================================================
-INSERT INTO replays (
-  id,
-  match_id,
-  tournament_id,
-  uploaded_by,
-  uploaded_at,
-  r2_object_key,
-  file_size_bytes,
-  content_hash,
-  original_filename,
-  parse_status,
-  parse_error
-)
-VALUES
-  (
-    1,
-    1,
-    1,
-    1,
-    '2026-03-03 20:25:00',
-    'replays/spring-2026/match-1/game-1.aoe2record',
-    524288,
-    'seedhash-match1-game1',
-    'match1_game1.aoe2record',
-    'parsed',
-    NULL
-  ),
-  (
-    2,
-    3,
-    1,
-    1,
-    '2026-03-10 21:10:00',
-    'replays/spring-2026/match-3/game-1.aoe2record',
-    498122,
-    'seedhash-match3-game1',
-    'match3_game1.aoe2record',
-    'pending',
-    NULL
-  );
-
--- ============================================================
 -- MATCH UNITS
--- One parsed game attached to played match 1
 -- ============================================================
 INSERT INTO match_units (
   id,
   match_id,
   unit_index,
-  replay_id,
   winner_id,
   loser_id
 )
 VALUES
-  (1, 1, 1, 1, 1, 2);
+  (1, 1, 1, 1, 2),
+  (2, 1, 2, 2, 1),
+  (3, 1, 3, 1, 2),
+  (4, 5, 1, 5, 6),
+  (5, 5, 2, 5, 6);
 
 -- ============================================================
 -- MATCH VODS

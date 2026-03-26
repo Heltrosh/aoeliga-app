@@ -14,6 +14,7 @@ import AdminPage from "../pages/tournament/AdminPage";
 import AdminUsersPage from "../pages/landing/admin/AdminUsersPage";
 import SignupPage from "../pages/tournament/SignupPage";
 import ReplayTestPage from "../pages/tournament/ReplayTestPage";
+import SetupWizardPage from "../pages/tournament/SetupWizardPage";
 
 export const router = createBrowserRouter([
   {
@@ -22,7 +23,7 @@ export const router = createBrowserRouter([
       { path: "/", element: <LandingPage /> },
       { path: "/rulesets", element: <RulesetsPage /> },
       { path: "/admin", element: <GlobalAdminPage /> },
-      { path: "/admin/users", element: <AdminUsersPage />},
+      { path: "/admin/users", element: <AdminUsersPage /> },
       {
         path: "/t/:slug",
         element: <TournamentLayout />,
@@ -33,8 +34,9 @@ export const router = createBrowserRouter([
           { path: "schedule", element: <SchedulePage /> },
           { path: "players", element: <PlayersPage /> },
           { path: "signup", element: <SignupPage /> },
+          { path: "setup", element: <SetupWizardPage /> },
           { path: "admin", element: <AdminPage /> },
-          { path: "replay-test", element: <ReplayTestPage /> }
+          { path: "replay-test", element: <ReplayTestPage /> },
         ],
       },
     ],

@@ -13,6 +13,7 @@ import { RegistrationsTableSection } from "./signup/RegistrationsTableSection";
 import { ReviewModal } from "./signup/ReviewModal";
 import { DetailsModal } from "./signup/DetailsModal";
 import { AdminRegistrationSection } from "./signup/AdminRegistrationSection";
+import { SetupEntrySection } from "./signup/SetupEntrySection";
 
 export default function SignupPage() {
   const { tournament } = useTournament();
@@ -51,8 +52,12 @@ export default function SignupPage() {
         <Title order={2}>{t("tournament.signup.pageTitle")}</Title>
         <Text c="dimmed">
           {isStaff
-            ? t("tournament.signup.pageDescription.staff", { tournament: tournament.name })
-            : t("tournament.signup.pageDescription.user", { tournament: tournament.name })}
+            ? t("tournament.signup.pageDescription.staff", {
+                tournament: tournament.name,
+              })
+            : t("tournament.signup.pageDescription.user", {
+                tournament: tournament.name,
+              })}
         </Text>
       </div>
 
@@ -80,15 +85,22 @@ export default function SignupPage() {
       <DetailsModal state={state} />
 
       {state.showSettingsSection ? (
-        <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="lg" style={{ alignItems: "start" }}>
-          <div style={{ alignSelf: "start" }}>
-            <RegistrationSettingsSection state={state} />
-          </div>
+        <Stack gap="lg">
+          <AdminRegistrationSection state={state} />
+          <SimpleGrid
+            cols={{ base: 1, xl: 2 }}
+            spacing="lg"
+            style={{ alignItems: "start" }}
+          >
+            <div style={{ alignSelf: "start" }}>
+              <RegistrationSettingsSection state={state} />
+            </div>
 
-          <div style={{ alignSelf: "start" }}>
-            <AdminRegistrationSection state={state} />
-          </div>
-        </SimpleGrid>
+            <div style={{ alignSelf: "start" }}>
+              <SetupEntrySection state={state} />
+            </div>
+          </SimpleGrid>
+        </Stack>
       ) : null}
     </Stack>
   );

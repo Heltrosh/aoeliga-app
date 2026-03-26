@@ -244,8 +244,8 @@ export function CollapsibleTile({
 
   return (
     <AppSurface variant="card" p="lg">
-      <Group justify="space-between" align="flex-start">
-        <div>
+      <Group justify="space-between" align="flex-start" wrap="nowrap">
+        <div style={{ flex: 1, minWidth: 0 }}>
           <Title order={3}>{title}</Title>
           <Text size="sm" c="dimmed">
             {subtitle}

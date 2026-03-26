@@ -1,4 +1,12 @@
-import { Alert, Badge, Button, Group, NumberInput, Stack, Text } from "@mantine/core";
+import {
+  Alert,
+  Badge,
+  Button,
+  Group,
+  NumberInput,
+  Stack,
+  Text,
+} from "@mantine/core";
 
 import { CollapsibleTile } from "../../../components/tournament-admin/shared";
 import { useI18n } from "../../../i18n/I18nProvider";
@@ -87,7 +95,9 @@ export function RegistrationSettingsSection({
               ? t("tournament.signup.settings.status.open")
               : t("tournament.signup.settings.status.closed"),
           })}
-          {pendingChanged ? ` ${t("tournament.signup.settings.unsavedChange")}` : ""}
+          {pendingChanged
+            ? ` ${t("tournament.signup.settings.unsavedChange")}`
+            : ""}
           {tournament.recent_games_days
             ? ` ${t("tournament.signup.settings.currentWindow", {
                 days: tournament.recent_games_days,
